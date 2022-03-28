@@ -181,20 +181,30 @@ vector<std::shared_ptr<Image>> computeImagePyramid( std::shared_ptr<Image> imGra
     int nScales = scaleNb(imGray, multiscale);
 
     vector<std::shared_ptr<Image>> imagePyramid(nScales);
+    double sigma, h;
 
-    // generate gaussian pyramid with gray pictures
+
+    /*if(nScales<=2)
+{h=5;
+sigm=1.6;
+}
+else
+{h=9;
+sigma=3.2;
+}*/
+
     for (int i = 0; i < nScales; i++){
         float scale = pow(scale_step, i - nScales + 1);
         
         //Matrix  filter=getGaussian(3,3, sigma_scale/scale);
-        Matrix  filter=getGaussian(13,13, 1.6);
+        Matrix  filter=getGaussian(5,5,1.6);
 
 
         imGray=applyFilter(imGray, filter);
         std::cout<<h_kernel<<std::endl;
         cout << "w: " << imGray->w <<" "<<"H: "<<imGray->h<<endl;
 
-        int k=Sauver(imGray, "grey.png");
+        //  int k=Sauver(imGray, "grey.png");
 
 
         
@@ -220,7 +230,7 @@ vector<Segment> lsd_multiscale( vector<std::shared_ptr<Image>> &imagePyramid, co
         double q=4-i;
         if(q<0)
             q=1;
-        segments = LineSegmentDetection(imagePyramid[i], noisyTexture, segments,q, 45.0f, 0.f, 0.4f, 1024, multiscale, i, lengthThresh);
+        segments = LineSegmentDetection(imagePyramid[i], noisyTexture, segments,4, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
         cout << "#lines = " << segments.size() << endl;
         // upsize segments
         if (i != nScales - 1){
