@@ -87,7 +87,7 @@ typedef vector<double> Array;
 typedef vector<Array> Matrix;
 
 typedef struct Pixel
-{int*rgb;
+{double*rgb;
     int operator[](int idx)
     {
         return rgb[idx];
@@ -97,19 +97,19 @@ typedef struct Pixel
     { return( rgb[0]+rgb[1]+rgb[2])/3;}
     Pixel()
     {
-        rgb = new int[3];
+        rgb = new double[3];
         rgb[0] = 0.;
         rgb[1] = 0.;
         rgb[2] = 0.;
     }
-    Pixel(int r, int g, int b)
+    Pixel(double r, double g, double b)
     {
-        rgb = new int[3];
+        rgb = new double[3];
         rgb[0] = r;
         rgb[1] = g;
         rgb[2] = b;
     }
-    /*~Pixel()
+   /* ~Pixel()
      {
          delete[] rgb;
      }*/
