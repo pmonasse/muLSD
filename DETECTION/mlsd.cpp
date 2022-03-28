@@ -646,7 +646,7 @@ void denseGradientFilter(vector<int> &noisyTexture,  std::shared_ptr<Image>  im,
         const int step = size_kernel/2;
         const int nX = xsize-step;
         const int nY = ysize-step;
-        const double thresh_noise =0.99999999;
+        const double thresh_noise =0.99;
         // integral image for faster computation
         vector<double> integral_image(N);
         for (int i = 0; i < xsize; i++){
