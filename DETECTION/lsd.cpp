@@ -43,6 +43,10 @@
 #include "assert.h"
 #include "lodepng/lodepng.h"
 #define eps 2.2204e-16
+
+
+////////////// begin Rahima part ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////::
+
 using namespace std;
 std::shared_ptr<Image> NouvelleImage(int w,int h)
 {std::shared_ptr<Image> I = std::make_shared<Image>();
@@ -162,37 +166,10 @@ int Sauver(std::shared_ptr<Image> I,const char* fichier)
     return 0;
 }
 
-////////
-/*double gaussian( double x, double mu, double sigma ) {
-    const double a = ( x - mu ) / sigma;
-    return std::exp( -0.5 * a * a );
-}
-
-/////////////
-Matrix produce2dGaussianKernel (double sigma) {
-    double kernelRadius=sigma*2.;
-    Matrix kernel2d(2*kernelRadius+1, Array(2*kernelRadius+1));
-    double sum = 0;
-    // compute values
-    for (int row = 0; row < kernel2d.size(); row++)
-        for (int col = 0; col < kernel2d[row].size(); col++) {
-            double x = gaussian(row, kernelRadius, sigma)
-                    * gaussian(col, kernelRadius, sigma);
-            kernel2d[row][col] = x;
-            sum += x;
-        }
-    // normalize
-    for (int row = 0; row < kernel2d.size(); row++)
-        for (int col = 0; col < kernel2d[row].size(); col++)
-            kernel2d[row][col] /= sum;
-    return kernel2d;
-}
-
-*/
-/////
 
 
 
+//// rgb to gray
 std::shared_ptr<Image> rgbtogray(std::shared_ptr<Image> Im){
     std::shared_ptr<Image>  newImage=NouvelleImage(Im->w,Im->h);
     for(int i=0; i<Im->w; i++){
@@ -212,6 +189,7 @@ typedef vector<double> Array;
 typedef vector<Array> Matrix;
 
 
+//////////// gauss kernel
 
 Matrix getGaussian(int height, int width, double sigma)
 {
@@ -221,7 +199,10 @@ Matrix getGaussian(int height, int width, double sigma)
 
     for (i=0 ; i<height ; i++) {
         for (j=0 ; j<width ; j++) {
-            kernel[i][j] = exp(-(i*i+j*j)/(2*sigma*sigma))/(2*M_PI*sigma*sigma);
+            double ic = i - (height-1) / 2;
+            double jc = j - (width-1) / 2;
+            kernel[i][j] = exp(-(ic*ic+jc*jc)/(2*sigma*sigma))/(2*M_PI*sigma*sigma);
+            
             sum += kernel[i][j];
         }
     }
@@ -234,6 +215,11 @@ Matrix getGaussian(int height, int width, double sigma)
 
     return kernel;
 }
+
+
+
+
+
 
 //////////////////////
 
@@ -251,12 +237,15 @@ std::shared_ptr<Image> applyFilter(std::shared_ptr<Image> image, Matrix &filter)
 
     std::shared_ptr<Image> newImage=NouvelleImage(image->w ,  image->h);
 
-    int kCenterX = filterWidth / 2;
-    int kCenterY = filterHeight / 2;
+    int kCenterX = (filterWidth-1)/ 2;
+    int kCenterY = (filterHeight-1) / 2;
 
     for(int i=0; i < width; ++i) {              // rows
         for(int j=0; j <height; ++j) {          // columns
+
             Pixel pix2;
+
+
             for(int m=0; m < filterHeight; ++m) {     // kernel rows
                 int mm = filterHeight - 1 - m;      // row index of flipped kernel
                 for(int n=0; n < filterWidth; ++n) { // kernel columns
@@ -266,13 +255,19 @@ std::shared_ptr<Image> applyFilter(std::shared_ptr<Image> image, Matrix &filter)
                         int ii = j + (mm - kCenterY);
                         int jj = i + (nn - kCenterX);
 
+                        if (ii< 0) ii= -1 - ii;
+                        if (ii >=height) ii= 2 * height - ii - 1;
 
+                        if (jj< 0) jj= -1 - jj;
+                        if (jj >= width) jj = 2 *width- jj - 1;
                         if( ii >= 0 && ii < height && jj >= 0 && jj < width )
                         {
                             pix1=GetPixel(image,jj,ii);
 
+
                             pix2.rgb[d]+=filter[mm][nn]*pix1.rgb[d];
-                            //std::cout<<pix2.rgb[d]<<std::endl;
+
+
                             SetPixel(newImage,i,j,pix2);}
 
 
@@ -286,6 +281,9 @@ std::shared_ptr<Image> applyFilter(std::shared_ptr<Image> image, Matrix &filter)
 
 
 
+
+
+////////////// end Rahima part ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////::
 
 
 
@@ -765,7 +763,7 @@ static image_double gaussian_sampler(image_double in, double scale,
     out = new_image_double(N, M);
 
     /* sigma, kernel size and memory for the kernel */
-    sigma = 1.6;//scale < 1.0 ? sigma_scale / scale : sigma_scale;
+    sigma =3.2;//scale < 1.0 ? sigma_scale / scale : sigma_scale;
     /*
      The size of the kernel is selected to guarantee that the
      the first discarded term is at least 10^prec times smaller
@@ -775,8 +773,8 @@ static image_double gaussian_sampler(image_double in, double scale,
      x = sigma * sqrt( 2 * prec * ln(10) ).
      */
     prec = 3.0;
-    h = //(unsigned int)ceil(sigma * sqrt(2.0 * prec * log(10.0)));
-            n = 13;//1 + 2 * h; /* kernel size */
+    h = 5;//(unsigned int)ceil(sigma * sqrt(2.0 * prec * log(10.0)));
+    n = 1 + 2 * h; /* kernel size */
     kernel = new_ntuple_list(n);
 
     /* auxiliary double image size variables */
@@ -1886,7 +1884,7 @@ double rect_improve(struct rect * rec, image_double angles,
     if (log_nfa > log_eps) return log_nfa;
 
     /* try finer precisions */
-    rect_copy(rec, &r);
+    /* rect_copy(rec, &r);
     for (n = 0; n < 5; n++)
     {
         r.p /= 1.0;
@@ -1897,7 +1895,7 @@ double rect_improve(struct rect * rec, image_double angles,
             log_nfa = log_nfa_new;
             rect_copy(&r, rec);
         }
-    }
+    }*/
 
     if (log_nfa > log_eps) return log_nfa;
 
@@ -1964,7 +1962,7 @@ double rect_improve(struct rect * rec, image_double angles,
     if (log_nfa > log_eps) return log_nfa;
 
     /* try even finer precisions */
-    rect_copy(rec, &r);
+    /*  rect_copy(rec, &r);
     for (n = 0; n < 5; n++)
     {
         r.p /=1.0;
@@ -1975,7 +1973,7 @@ double rect_improve(struct rect * rec, image_double angles,
             log_nfa = log_nfa_new;
             rect_copy(&r, rec);
         }
-    }
+    }*/
 
     return log_nfa;
 }
