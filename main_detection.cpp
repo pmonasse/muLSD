@@ -24,7 +24,7 @@
 
 #include "detection.hpp"
 #include "interface.hpp"
-#include "cmdLine/cmdLine.h"
+#include "cmdLine.h"
 
 using namespace std;
 
@@ -41,8 +41,6 @@ int main(int argc, char* argv[]){
 
     string picPath;
 
-    bool consecutive = true;
-    bool withDetection = false;
     double segment_length_threshold=0;//0.0009 ;
     bool multiscale = true;
 
