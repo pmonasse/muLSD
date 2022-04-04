@@ -23,9 +23,9 @@
   ----------------------------------------------------------------------------*/
 
 #include "mlsd.hpp"
+#include <algorithm>
 
 using namespace std;
-//using namespace cv;
 
 /*----------------------------------------------------------------------------*/
 /** Multiscale functions

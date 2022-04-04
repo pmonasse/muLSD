@@ -34,18 +34,15 @@
 #include "lsd.hpp"
 #include "mlsd.hpp"
 
-// NAMESPACES
-using namespace std;
-
 /*=================== MULTISCALE LSD INTERFACE ===================*/
 // detect the segments into picture given by im
 //@imagePyramid is the Gaussian pyramid of scale pictures computed with computeImagePyramid function
 //@thresh the process will delete segments of length lower than thresh% of size of the scaled picture 
 //	(only for multiscale, allow a faster processing)
 //@multiscale enables/disable the multiscale processing
-vector<Segment> lsd_multiscale( vector<std::shared_ptr<Image>> &imagePyramid, const float thresh, const bool multiscale);
+std::vector<Segment> lsd_multiscale( std::vector<std::shared_ptr<Image>> &imagePyramid, const float thresh, const bool multiscale);
 
 // compute the pyramid of image for the multiscale processing
-vector<std::shared_ptr<Image>> computeImagePyramid( std::shared_ptr<Image> imGray, const bool multiscale);
+std::vector<std::shared_ptr<Image>> computeImagePyramid( std::shared_ptr<Image> imGray, const bool multiscale);
 
 #endif

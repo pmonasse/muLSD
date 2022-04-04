@@ -81,10 +81,9 @@
 #include <memory>
 #include <vector>
 #include <fstream>
-using namespace std;
 
-typedef vector<double> Array;
-typedef vector<Array> Matrix;
+typedef std::vector<double> Array;
+typedef std::vector<Array> Matrix;
 
 typedef struct Pixel
 {double*rgb;

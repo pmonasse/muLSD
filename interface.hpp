@@ -25,18 +25,9 @@
 #ifndef INTERFACE_HPP
 #define INTERFACE_HPP
 
-// OPENCV
-//#include "opencv2/highgui/highgui.hpp"
-//#include "opencv2/imgproc/imgproc.hpp"
-
 // STD LIB
-#include <iostream>
 #include <fstream>
-#include <string>
 #include <vector>
-#include <set>
-#include <map>
-
 
 struct Point2d{
 double x;

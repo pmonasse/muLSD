@@ -29,8 +29,7 @@
   ----------------------------------------------------------------------------*/
 
 #include "detection.hpp"
-
-
+using namespace std;
 
 vector<Segment> LineSegmentDetection(std::shared_ptr<Image> im, vector<int> &noisyTexture, const vector<Segment> &rawSegments,
                                      const double quant, const double ang_th, const double log_eps,
