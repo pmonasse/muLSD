@@ -29,9 +29,6 @@
 using namespace std;
 
 int main(int argc, char* argv[]){ 
-    // Seed random function
-    srand((unsigned int)(time(0)));
-
     // parse arguments
     CmdLine cmd;
 
