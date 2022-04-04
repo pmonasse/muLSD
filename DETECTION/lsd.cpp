@@ -62,17 +62,6 @@ std::shared_ptr<Image> NouvelleImage(int w,int h)
 
 
 ///////////
-std::shared_ptr<Image> CopieImage(std::shared_ptr<Image> I)
-{
-    std::shared_ptr<Image> res;
-    if (!I)
-        std::cout<<"0"<<std::endl;;
-    res = NouvelleImage(I->w,I->h);
-    memcpy(res->data,I->data,I->w*I->h*sizeof(Pixel));
-    return res;
-}
-
-///////////
 void SetPixel(std::shared_ptr<Image> I,int i,int j,Pixel p)
 {
     //assert(I && i>=0 && i<I->w && j>=0 && j<I->h);

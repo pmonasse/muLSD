@@ -140,10 +140,6 @@ int Sauver(std::shared_ptr<Image> I,const char* fichier);
 
 std::shared_ptr<Image> Charger(const char* fichier);
 
-std::shared_ptr<Image> CopieImage(std::shared_ptr<Image> I);
-
-
-
 std::shared_ptr<Image> Scale(std::shared_ptr<Image> self, float scaleX, float scaleY) ;
 
 
