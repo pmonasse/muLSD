@@ -84,7 +84,7 @@ vector<Segment> LineSegmentDetection(std::shared_ptr<Image> im, vector<int> &noi
      log10(11) + 5/2 * (log10(X) + log10(Y)).
      */
     logNT = 5.0 * (log10((double)xsize) + log10((double)ysize)) / 2.0
-            + log10(1.0);
+            + log10(11.0);
     min_reg_size = (int)(-logNT / log10(p)); /* minimal number of points in region that can give a meaningful event */
 
     used = new_image_char_ini(xsize, ysize, NOTUSED);

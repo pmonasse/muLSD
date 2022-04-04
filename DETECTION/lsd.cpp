@@ -1873,10 +1873,10 @@ double rect_improve(struct rect * rec, image_double angles,
     if (log_nfa > log_eps) return log_nfa;
 
     /* try finer precisions */
-    /* rect_copy(rec, &r);
+    rect_copy(rec, &r);
     for (n = 0; n < 5; n++)
     {
-        r.p /= 1.0;
+        r.p /= 2.0;
         r.prec = r.p * M_PI;
         log_nfa_new = rect_nfa(&r, angles, logNT);
         if (log_nfa_new > log_nfa)
@@ -1884,7 +1884,7 @@ double rect_improve(struct rect * rec, image_double angles,
             log_nfa = log_nfa_new;
             rect_copy(&r, rec);
         }
-    }*/
+    }
 
     if (log_nfa > log_eps) return log_nfa;
 
@@ -1951,10 +1951,10 @@ double rect_improve(struct rect * rec, image_double angles,
     if (log_nfa > log_eps) return log_nfa;
 
     /* try even finer precisions */
-    /*  rect_copy(rec, &r);
+    rect_copy(rec, &r);
     for (n = 0; n < 5; n++)
     {
-        r.p /=1.0;
+        r.p /=2.0;
         r.prec = r.p * M_PI;
         log_nfa_new = rect_nfa(&r, angles, logNT);
         if (log_nfa_new > log_nfa)
@@ -1962,7 +1962,7 @@ double rect_improve(struct rect * rec, image_double angles,
             log_nfa = log_nfa_new;
             rect_copy(&r, rec);
         }
-    }*/
+    }
 
     return log_nfa;
 }
