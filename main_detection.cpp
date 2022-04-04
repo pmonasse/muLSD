@@ -28,70 +28,56 @@
 
 using namespace std;
 
-int main(int argc, char* argv[]){ 
+void saveLines(const PictureSegments &lines, const char* name) {
+    ofstream linesTxt(name, ofstream::out);
+    linesTxt << lines.size() << endl;
+    for (size_t i=0; i<lines.size(); i++)
+        lines[i].saveSegment(linesTxt);
+}
+
+int main(int argc, char* argv[]) { 
     // parse arguments
     CmdLine cmd;
-
-    string dirPath;
-    string picList;
-
-    string name_image;
-
-    string str="png";
 
     string picPath;
 
     double segment_length_threshold=0;//0.0009 ;
     bool multiscale = true;
 
-    // required
-    cmd.add( make_option('d', dirPath, "dirPath") );
-    cmd.add( make_option('i', name_image, "inputPic") );
-    
-    // optional
-    cmd.add( make_option('m', multiscale, "multiscale") );
-    cmd.add( make_option('t', segment_length_threshold, "threshold") );
+    // options
+    cmd.add( make_option('m', multiscale, "multiscale")
+             .doc("multiscale option") );
+    cmd.add( make_option('t', segment_length_threshold, "threshold")
+             .doc("threshold for segment length") );
 
     try {
-        if (argc == 1) throw std::string("Invalid command line parameter.");
         cmd.process(argc, argv);
     } catch(const std::string& s) {
-        std::cerr << "Usage: " << argv[0] << '\n'
-                  << "[-d|--dirPath] feature path]\n"
-                  << "[-i|--name_image] onepicture] \n"
-                  << "\n[Optional]\n"
-                  << "[-m|--multiscale] multiscale option (default = TRUE)\n"
-                  << "[-t|--threshold] threshold for segment length (default = 0.05% of image size)\n"
-                  << endl;
-        return EXIT_FAILURE;
+        std::cerr << "Error: " << s << std::endl;
+        return 1;
     }
-    dirPath += "/";
-
-
-    const string ext = (multiscale)? "" : "_no_mlsd";
-    bool exist=name_image.find(str) != string::npos;
-    if(exist==true){
-        clock_t processing_time = clock();
-        const char* parsName = name_image.c_str();
-        std::shared_ptr<Image> im = Charger(parsName);
-
-        //std::cout<<"parsName="<<parsName<<std::endl;
-
-
-        std::shared_ptr<Image> ImGray=rgbtogray(im);
-        //int k=Sauver(ImGray, "Image22.png");
-        vector<std::shared_ptr<Image>> imagePyramid = computeImagePyramid(ImGray, multiscale);
-
-        vector<Segment> segments = lsd_multiscale(imagePyramid, segment_length_threshold, multiscale);
-        saveLines(segments, dirPath,name_image+ext);
-
-        cout << "PROCESSED IN " << (clock() - processing_time) / float(CLOCKS_PER_SEC) << endl;
-
-        /*Image* im1 = Charger(parsName);
-    vector<Segment> segments1 = readLines(dirPath, name_image+ext);
-    saveLinesPicture(segments1, *im1, dirPath, name_image+ext, false);*/
+    if(argc != 3) {
+        cerr << "Usage: " << argv[0] << " [options] imgIn.png out.txt\n" << cmd;
+        return 1;
     }
-    else std::cout<<"give a PNG image"<<std::endl;
+
+    std::shared_ptr<Image> im = Charger(argv[1]);
+    if(! im) {
+        cerr << "Unable to load image " << argv[1] << endl;
+        return 1;
+    }
+
+    clock_t t0 = clock();
+
+    std::shared_ptr<Image> ImGray=rgbtogray(im);
+    vector<std::shared_ptr<Image>> imagePyramid =
+        computeImagePyramid(ImGray, multiscale);
+
+    vector<Segment> segments =
+        lsd_multiscale(imagePyramid, segment_length_threshold, multiscale);
+    saveLines(segments, argv[2]);
+
+    cout << "Runtime: " << (clock()-t0)/float(CLOCKS_PER_SEC) << endl;
 
     return 0;
 }

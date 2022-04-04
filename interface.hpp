@@ -81,18 +81,4 @@ struct Segment{
 
 typedef std::vector<Segment> PictureSegments;
 
-/*=================== INPUT/OUTPUT ===================*/
-// read picture file 
-// syntax is:
-// number_of_pictures
-// name whole_path
-void readPictureFile(const std::string path, std::vector<std::string> &picName, std::vector<std::string> &picPath);
-
-// load/save segments detected in:
-// - txt file @path/name_lines.txt
-// - picture @path/pictures/name_lines.png
-// @withNumber enables/disables the display of segments corresponding number into the saved picture
-PictureSegments readLines(const std::string path, const std::string name);
-void saveLines(const PictureSegments &lines, const std::string path, const std::string name);
-
 #endif
