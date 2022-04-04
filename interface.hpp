@@ -45,12 +45,6 @@ Point2d(double X,double Y):x(X),y(Y){}
 Point2d(){}
 };
 
-struct Point{
-int x;
-int y;
-Point(int X,int Y):x(X),y(Y){}
-Point(){}
-};
 // strucuture to keep track of segment detected
 struct Segment{
     // segment coordinates
