@@ -22,8 +22,8 @@
 
   ----------------------------------------------------------------------------*/
 
-#ifndef INTERFACE_HPP
-#define INTERFACE_HPP
+#ifndef SEGMENT_HPP
+#define SEGMENT_HPP
 
 #include <iostream>
 

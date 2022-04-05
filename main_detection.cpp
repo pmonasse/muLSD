@@ -23,7 +23,6 @@
   ----------------------------------------------------------------------------*/
 
 #include "detection.hpp"
-#include "interface.hpp"
 #include "cmdLine.h"
 
 using namespace std;

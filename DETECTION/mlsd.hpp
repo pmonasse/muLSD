@@ -24,9 +24,11 @@
 
 #ifndef MLSD_HPP
 #define MLSD_HPP
-#include "interface.hpp"
+
+#include "segment.hpp"
 #include "lsd.hpp"
 #include <set>
+#include <cmath>
 
 // parameters for pyramid of images
 const double prec = 3.0;

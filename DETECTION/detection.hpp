@@ -31,7 +31,6 @@
 #ifndef DETECTION_HPP
 #define DETECTION_HPP
 
-#include "lsd.hpp"
 #include "mlsd.hpp"
 
 /*=================== MULTISCALE LSD INTERFACE ===================*/

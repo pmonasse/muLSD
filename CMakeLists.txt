@@ -11,18 +11,17 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 endif()
-INCLUDE_DIRECTORIES(
-		    ./
-		    DETECTION/)
+INCLUDE_DIRECTORIES(. DETECTION)
 		
-SET(LINE_DETECTION	DETECTION/lsd.cpp	DETECTION/lsd.hpp
-			DETECTION/mlsd.cpp	DETECTION/mlsd.hpp
-			DETECTION/detection.cpp DETECTION/detection.hpp
+SET(LINE_DETECTION
+  DETECTION/lsd.cpp	DETECTION/lsd.hpp
+  DETECTION/segment.hpp DETECTION/segment.cpp
+  DETECTION/mlsd.cpp	DETECTION/mlsd.hpp
+  DETECTION/detection.cpp DETECTION/detection.hpp
 )
 	
 # MULTISCALE LSD
 ADD_EXECUTABLE(LSD_MULTISCALE ${LINE_DETECTION}
-		           interface.hpp			interface.cpp
 		           main_detection.cpp
 		           lodepng/lodepng.cpp)
 #TARGET_LINK_LIBRARIES( ${OpenCV_LIBS})

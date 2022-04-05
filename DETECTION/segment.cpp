@@ -22,7 +22,7 @@
 
   ----------------------------------------------------------------------------*/
 
-#include "interface.hpp"
+#include "segment.hpp"
 #include <cmath>  
 
 /// Constructor
