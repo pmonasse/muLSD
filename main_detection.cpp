@@ -32,7 +32,7 @@ void saveLines(const std::vector<Segment> &lines, const char* name) {
     ofstream linesTxt(name, ofstream::out);
     linesTxt << lines.size() << endl;
     for (size_t i=0; i<lines.size(); i++)
-        lines[i].saveSegment(linesTxt);
+        linesTxt << lines[i];
 }
 
 int main(int argc, char* argv[]) { 

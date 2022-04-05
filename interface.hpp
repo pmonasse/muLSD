@@ -25,9 +25,7 @@
 #ifndef INTERFACE_HPP
 #define INTERFACE_HPP
 
-// STD LIB
-#include <fstream>
-#include <vector>
+#include <iostream>
 
 // strucuture to keep track of segment detected
 struct Segment{
@@ -43,18 +41,17 @@ struct Segment{
     // scale of last detection from 0 (rawest) to n (finest)
     int scale;
 
-    Segment(){};
+    Segment(){}
     Segment(const double X1, const double Y1, const double X2, const double Y2,
             const double w, const double p, const double nfa, const double s);
 
-    // FOR MULTISCALE LSD
+    // For multiscale LSD
     void upscale(const double k);
-
-    // I/O METHODS for segments
-    void readSegment(std::ifstream &file);
-    void saveSegment(std::ofstream &file) const;
 
     double qlength();
 };
+
+std::istream& operator>>(std::istream &str, Segment& s);
+std::ostream& operator<<(std::ostream &str, const Segment& s);
 
 #endif
