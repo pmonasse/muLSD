@@ -29,13 +29,6 @@
 #include <fstream>
 #include <vector>
 
-struct Point2d{
-double x;
-double y;
-Point2d(double X,double Y):x(X),y(Y){}
-Point2d(){}
-};
-
 // strucuture to keep track of segment detected
 struct Segment{
     // segment coordinates

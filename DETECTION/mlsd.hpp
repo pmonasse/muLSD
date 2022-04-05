@@ -34,6 +34,13 @@ const double sigma_scale = 0.8;
 const double scale_step = 2.0;
 const int h_kernel = (unsigned int)ceil(sigma_scale * sqrt(2.0 * prec * log(10.0)));
 
+struct Point2d{
+    double x;
+    double y;
+    Point2d(double X,double Y):x(X),y(Y){}
+    Point2d(){}
+};
+
 class NFA_params{
     double value, theta, prec_divided_by_pi, prec;
     bool computed;
