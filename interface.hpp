@@ -64,6 +64,4 @@ struct Segment{
     double qlength();
 };
 
-typedef std::vector<Segment> PictureSegments;
-
 #endif
