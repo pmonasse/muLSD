@@ -24,8 +24,21 @@
 
 #include "detection.hpp"
 #include "cmdLine.h"
+#include "image.h"
 
 using namespace std;
+
+/// Adapt number of scales to the resolution of the picture.
+/// With pictures of less than 1Mpx, the original LSD detector performs well.
+int nbScales(int w, int h){
+    int n = 1;
+    int maxWH = max(w,h);
+    while(maxWH >1000){
+        maxWH /= 2;
+        n++;
+    }
+    return n;
+}
 
 void saveLines(const std::vector<Segment> &lines, const char* name) {
     ofstream linesTxt(name, ofstream::out);
@@ -60,23 +73,26 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::shared_ptr<Image> im = Charger(argv[1]);
-    if(! im) {
+    Image<float> im(argv[1]);
+    if(! im.data) {
         cerr << "Unable to load image " << argv[1] << endl;
         return 1;
     }
 
     clock_t t0 = clock();
 
-    std::shared_ptr<Image> ImGray=rgbtogray(im);
-    vector<std::shared_ptr<Image>> imagePyramid =
-        computeImagePyramid(ImGray, multiscale);
+    int nScales = multiscale? nbScales(im.w, im.h): 1;
+    vector<Image<float>*> imagePyramid = gaussPyramid(im, nScales);
+    reverse(imagePyramid.begin(), imagePyramid.end());
 
     vector<Segment> segments =
         lsd_multiscale(imagePyramid, segment_length_threshold, multiscale);
     saveLines(segments, argv[2]);
 
     cout << "Runtime: " << (clock()-t0)/float(CLOCKS_PER_SEC) << endl;
+
+    for(size_t i=0; i<imagePyramid.size(); i++)
+        delete imagePyramid[i];
 
     return 0;
 }

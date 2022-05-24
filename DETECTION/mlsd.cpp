@@ -31,22 +31,6 @@ using namespace std;
 /** Multiscale functions
 */
 
-int scaleNb(std::shared_ptr<Image> im, bool multiscale){
-    // adapt number of scales to the resolution of the picture
-    // it appears that with pictures of less than 1Mpx, the original LSD detector performs quite well
-    // if the multiscale approach is selected, even with 1 scale only,
-    // a post processing will be applied to merge segments after classical detection
-    int nScales = 1;
-    if (multiscale){
-        int maxWH = max(im->h, im->w);
-        while (maxWH >1000){
-            maxWH /= 2;
-            nScales++;
-        }
-    }
-    return nScales;
-}
-
 Point2d operator+(const Point2d &p, const Point2d &q){
     return Point2d(p.x + q.x, p.y + q.y);
 }
@@ -637,12 +621,12 @@ void mergeSegments(vector<Cluster> &refinedLines, const double segment_length_th
     clusters.keepCorrectLines(refinedLines, used, log_eps, true);
 }
 
-void denseGradientFilter(vector<int> &noisyTexture,  std::shared_ptr<Image>  im, 
+void denseGradientFilter(vector<int> &noisyTexture, int w, int h, 
                          const image_double &angles, const image_char &used,
                          const int xsize, const int ysize, const int N){
     if(noisyTexture.size() == 0){
         noisyTexture = vector<int>(N, 0);
-        const int size_kernel = max(ceil(0.01*(im->w+im->h)/4), 5.0); // 0.5% of image size
+        const int size_kernel = max(ceil(0.01*(w+h)/4), 5.0); // 0.5% of image size
         const int step = size_kernel/2;
         const int nX = xsize-step;
         const int nY = ysize-step;

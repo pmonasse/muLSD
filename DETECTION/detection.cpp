@@ -31,7 +31,7 @@
 #include "detection.hpp"
 using namespace std;
 
-vector<Segment> LineSegmentDetection(std::shared_ptr<Image> im, vector<int> &noisyTexture, const vector<Segment> &rawSegments,
+vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyTexture, const vector<Segment> &rawSegments,
                                      const double quant, const double ang_th, const double log_eps,
                                      const double density_th, const int n_bins,
                                      const bool multiscale, const int i_scale, const float segment_length_threshold)
@@ -55,13 +55,11 @@ vector<Segment> LineSegmentDetection(std::shared_ptr<Image> im, vector<int> &noi
     rho = quant / sin(prec); /* gradient magnitude threshold */
 
     /* load image and compute angle at each pixel */
-    const int N = im->w*im->h;
+    const int N = im.w*im.h;
     double* data = new double[N];
-    for (int i = 0; i < N; i++){
-        data[i]=im->data[i].greylevel();
-        //data[i] = double(im.data[i]);
-    }
-    image = new_image_double_ptr((unsigned int)im->w, (unsigned int)im->h, data);
+    for (int i = 0; i < N; i++)
+        data[i]=(double)im.data[i];
+    image = new_image_double_ptr((unsigned int)im.w, (unsigned int)im.h, data);
     angles = ll_angle(image, rho, &list_p, &mem_p, &modgrad, (unsigned int)n_bins);
     free((void *)image);
     delete[] data;
@@ -92,7 +90,7 @@ vector<Segment> LineSegmentDetection(std::shared_ptr<Image> im, vector<int> &noi
     /* search for line segments with previous scale information */
     vector<Cluster> refinedLines = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
     /* suppress dense part of gradients (great chance of noisy texture) */
-    denseGradientFilter(noisyTexture, im, angles, used, xsize, ysize, N);
+    denseGradientFilter(noisyTexture, im.w, im.h, angles, used, xsize, ysize, N);
 
     /* classical LSD algorithm
     note that for multiscale algo, some pixels are already set as used
@@ -175,48 +173,8 @@ vector<Segment> LineSegmentDetection(std::shared_ptr<Image> im, vector<int> &noi
     return returned_lines;
 }
 
-vector<std::shared_ptr<Image>> computeImagePyramid( std::shared_ptr<Image> imGray, const bool multiscale){
-    // compute nb of scale wrt picture size and multiscale option
-    int nScales = scaleNb(imGray, multiscale);
-
-    vector<std::shared_ptr<Image>> imagePyramid(nScales);
-    double sigma, h;
-
-
-    /*if(nScales<=2)
-{h=5;
-sigm=1.6;
-}
-else
-{h=9;
-sigma=3.2;
-}*/
-
-    for (int i = 0; i < nScales; i++){
-        float scale = pow(scale_step, i - nScales + 1);
-        
-        //Matrix  filter=getGaussian(3,3, sigma_scale/scale);
-        Matrix  filter=getGaussian(5,5,1.6);
-
-
-        imGray=applyFilter(imGray, filter);
-        std::cout<<h_kernel<<std::endl;
-        cout << "w: " << imGray->w <<" "<<"H: "<<imGray->h<<endl;
-
-        //  int k=Sauver(imGray, "grey.png");
-
-
-        
-        imagePyramid[i]= Scale(imGray, scale,  scale) ;
-        int M=Sauver(imagePyramid[i], "resultat2.png");
-        cout << "new_w: " << imagePyramid[i]->w <<"  "<< "new_h: " << imagePyramid[i]->h<< endl;
-        rgbtogray(imagePyramid[i]);
-    }
-
-    return imagePyramid;
-}
-
-vector<Segment> lsd_multiscale( vector<std::shared_ptr<Image>> &imagePyramid, const float thresh, const bool multiscale){
+vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
+                               float thresh, bool multiscale){
     vector<Segment> segments;
     const int nScales = imagePyramid.size();
     vector<int> noisyTexture(0);
@@ -229,7 +187,7 @@ vector<Segment> lsd_multiscale( vector<std::shared_ptr<Image>> &imagePyramid, co
         double q=4-i;
         if(q<0)
             q=1;
-        segments = LineSegmentDetection(imagePyramid[i], noisyTexture, segments,4, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
+        segments = LineSegmentDetection(*imagePyramid[i], noisyTexture, segments,4, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
         cout << "#lines = " << segments.size() << endl;
         // upsize segments
         if (i != nScales - 1){

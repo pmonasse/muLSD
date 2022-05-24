@@ -32,16 +32,17 @@
 #define DETECTION_HPP
 
 #include "mlsd.hpp"
+#include "image.h"
 
 /*=================== MULTISCALE LSD INTERFACE ===================*/
 // detect the segments into picture given by im
-//@imagePyramid is the Gaussian pyramid of scale pictures computed with computeImagePyramid function
-//@thresh the process will delete segments of length lower than thresh% of size of the scaled picture 
+// If the multiscale approach is selected, even with 1 scale only,
+// a post processing will be applied to merge segments.
+// @imgPyrGaussian pyramid of scaled pictures
+// @thresh Delete segments of length lower than thresh% of size of the scaled picture 
 //	(only for multiscale, allow a faster processing)
-//@multiscale enables/disable the multiscale processing
-std::vector<Segment> lsd_multiscale( std::vector<std::shared_ptr<Image>> &imagePyramid, const float thresh, const bool multiscale);
-
-// compute the pyramid of image for the multiscale processing
-std::vector<std::shared_ptr<Image>> computeImagePyramid( std::shared_ptr<Image> imGray, const bool multiscale);
+// @multiscale enables/disable the multiscale processing
+std::vector<Segment> lsd_multiscale(const std::vector<Image<float>*>& imgPyr,
+                                    float thresh, bool multiscale);
 
 #endif

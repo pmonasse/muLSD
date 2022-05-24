@@ -102,11 +102,8 @@ public:
     void setIndex(int i);
 };
 
-// generate the number of scales needed for a given image
-int scaleNb(std::shared_ptr<Image>  im, const bool multiscale);
-
 // filter some area in the image for better SfM results and a faster line detection
-void denseGradientFilter(std::vector<int> &noisyTexture, std::shared_ptr<Image>  im, 
+void denseGradientFilter(std::vector<int> &noisyTexture, int w, int h, 
                          const image_double &angles, const image_char &used,
                          const int xsize, const int ysize, const int N);
 

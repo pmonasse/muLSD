@@ -1,33 +1,42 @@
 cmake_minimum_required(VERSION 3.1)
 PROJECT(MLSD)
 
-#FIND_PACKAGE(OpenCV REQUIRED)
-OPTION (USE_OpenMP "Use OpenMP" ON)
-if(USE_OpenMP)
-find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
-endif()
+find_package(PNG)
+if(PNG_FOUND)
+  add_definitions(${PNG_DEFINITIONS})
+else(PNG_FOUND)
+  # zlib is needed by libPNG
+  find_package(ZLIB)
+  if(NOT ZLIB_FOUND)
+    add_subdirectory(third_party/zlib-1.2.12)
+    set(ZLIB_LIBRARY ${ZLIB_LIBRARIES})
+  endif(NOT ZLIB_FOUND)
+  include_directories(${ZLIB_INCLUDE_DIRS})
+
+  set(SKIP_INSTALL_ALL 1)
+  add_subdirectory(third_party/libpng-1.6.37)
+endif(PNG_FOUND)
+include_directories(${PNG_INCLUDE_DIRS})
+
 INCLUDE_DIRECTORIES(. DETECTION)
 		
 SET(LINE_DETECTION
   DETECTION/lsd.cpp	DETECTION/lsd.hpp
   DETECTION/segment.hpp DETECTION/segment.cpp
   DETECTION/mlsd.cpp	DETECTION/mlsd.hpp
-  DETECTION/detection.cpp DETECTION/detection.hpp
-)
-	
+  DETECTION/detection.cpp DETECTION/detection.hpp)
+
 # MULTISCALE LSD
 ADD_EXECUTABLE(LSD_MULTISCALE ${LINE_DETECTION}
-		           main_detection.cpp
-		           lodepng/lodepng.cpp)
-#TARGET_LINK_LIBRARIES( ${OpenCV_LIBS})
+  io_png.c io_png.h
+  image.cpp image.h
+  main_detection.cpp)
 
-target_compile_options(LSD_MULTISCALE PRIVATE -Wall ${OpenMP_CXX_FLAGS})
-target_link_libraries(LSD_MULTISCALE PRIVATE ${OpenMP_CXX_FLAGS})
+target_compile_options(LSD_MULTISCALE PRIVATE -Wall -Wextra)
+target_link_libraries(LSD_MULTISCALE PRIVATE ${PNG_LIBRARIES})
 
-SET(CMAKE_BUILD_TYPE "Release")
+add_executable(test_pyramid test_pyramid.cpp io_png.h io_png.c image.h image.cpp)
+target_compile_options(test_pyramid PRIVATE -Wall -Wextra)
+target_link_libraries(test_pyramid PRIVATE ${PNG_LIBRARIES})
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

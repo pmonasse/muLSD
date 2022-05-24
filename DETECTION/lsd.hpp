@@ -62,14 +62,6 @@
 /** Label for pixels already used in detection. */
 #define USED    1
 
-/*----------------------------------------------------------------------------*/
-/*----------------------------- Point structure ------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*/
-/** A point (or pixel).
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -82,38 +74,13 @@
 #include <vector>
 #include <fstream>
 
-typedef std::vector<double> Array;
-typedef std::vector<Array> Matrix;
+/*----------------------------------------------------------------------------*/
+/*----------------------------- Point structure ------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-typedef struct Pixel
-{double*rgb;
-    int operator[](int idx)
-    {
-        return rgb[idx];
-
-    }
-    double greylevel ()
-    { return( rgb[0]+rgb[1]+rgb[2])/3;}
-    Pixel()
-    {
-        rgb = new double[3];
-        rgb[0] = 0.;
-        rgb[1] = 0.;
-        rgb[2] = 0.;
-    }
-    Pixel(double r, double g, double b)
-    {
-        rgb = new double[3];
-        rgb[0] = r;
-        rgb[1] = g;
-        rgb[2] = b;
-    }
-   /* ~Pixel()
-     {
-         delete[] rgb;
-     }*/
-} Pixel;
-////////
+/*----------------------------------------------------------------------------*/
+/** A point (or pixel).
+ */
 struct point {
     int x, y;
     point(){}
@@ -122,26 +89,6 @@ struct point {
         y = Y;
     }
 };
-/////////
-typedef struct Image
-{
-    int w,h;
-    Pixel* data;
-} Image;
-///////////////////////////
-Matrix getGaussian(int height, int width, double sigma);
-std::shared_ptr<Image> applyFilter(std::shared_ptr<Image> image, Matrix &filter);
-
-std::shared_ptr<Image> rgbtogray(std::shared_ptr<Image> Im);
-
-int Sauver(std::shared_ptr<Image> I,const char* fichier);
-
-
-std::shared_ptr<Image> Charger(const char* fichier);
-
-std::shared_ptr<Image> Scale(std::shared_ptr<Image> self, float scaleX, float scaleY) ;
-
-
 
 /*----------------------------------------------------------------------------*/
 /** Chained list of coordinates.
