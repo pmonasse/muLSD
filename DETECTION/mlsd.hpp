@@ -28,6 +28,7 @@
 #include "segment.hpp"
 #include "lsd.hpp"
 #include <set>
+#include <vector>
 #include <cmath>
 
 // parameters for pyramid of images

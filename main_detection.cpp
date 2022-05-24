@@ -25,6 +25,7 @@
 #include "detection.hpp"
 #include "cmdLine.h"
 #include "image.h"
+#include <fstream>
 
 using namespace std;
 
