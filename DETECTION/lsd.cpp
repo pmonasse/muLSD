@@ -26,21 +26,14 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
   ----------------------------------------------------------------------------*/
-#include <type_traits>
-#include <iostream>
-#include <memory>
-#include <iomanip>
-#include<iostream>
-#include<string.h>
-#include<stdlib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <limits.h>
-#include <float.h>
+
 #include "lsd.hpp"
-#include <cstdlib>
-#include "assert.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <float.h>
+#include <limits.h>
+
 #define eps 2.2204e-16
 
 /*---------------------------------------------------------------------------*/

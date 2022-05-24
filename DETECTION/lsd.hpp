@@ -62,12 +62,6 @@
 /** Label for pixels already used in detection. */
 #define USED    1
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <limits.h>
-#include <float.h>
-
 /*----------------------------------------------------------------------------*/
 /*----------------------------- Point structure ------------------------------*/
 /*----------------------------------------------------------------------------*/
