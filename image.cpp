@@ -42,7 +42,7 @@ float* gaussKernel(int& radius) {
 void convx_sub2(const Image<float>& im, const float* ker, int radius,
                 Image<float>& out) {
     assert(radius<=2*im.w);
-    out.reset(im.h, im.w/2);
+    out.reset(im.h, (im.w+1)/2); // Beware of odd width
     for(int y=0; y<im.h; y++) {
         const float* in=im.data+y*im.w;
         for(int x=0; x<im.w; x+=2) {
