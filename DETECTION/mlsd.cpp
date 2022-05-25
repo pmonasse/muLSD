@@ -198,7 +198,8 @@ bool Cluster::isToMerge(image_double angles, const double logNT){
                         rec_it->x < (int)angles->xsize && rec_it->y < (int)angles->ysize)
                 {
                     if (isaligned(rec_it->x, rec_it->y, angles, rec.theta, rec.prec)){
-                        data.push_back(point(rec_it->x, rec_it->y));
+                        point p = {rec_it->x, rec_it->y};
+                        data.push_back(p);
                     }
                 }
             }
@@ -342,7 +343,7 @@ class Rectangle{
         int count1 = 0, count2 =0;
         for (int x = xMin; x <= xMax; x++){
             for (int y = yMin; y <= yMax; y++){
-                point candidate(x,y);
+                point candidate = {x,y};
                 if (insideRect(p_up, p_down, q_up, q_down, candidate) && x >= 0 && x < angles->xsize && y >= 0 && y < angles->ysize){
                     if (angles->data[x + y * angles->xsize] != NOTDEF){
                         count2++;
@@ -422,15 +423,15 @@ public:
                     for (int dy = -1; dy <= 1; dy++){
                         if (dx == 0 && dy == 0){ continue; }
 
-                        int x = seed.x + dx;
-                        int y = seed.y + dy;
-                        int idx = pixelToIndex(x, y);
+                        point p = {seed.x + dx, seed.y + dy};
+                        int idx = pixelToIndex(p.x, p.y);
 
                         // add neighbor that have correct gradient directions and is not already in the cluster
-                        if (x < xMin || x > xMax || y < yMin || y > yMax || pixelCluster[idx] != CLUSTER_NULL){ continue; }
+                        if (p.x<xMin || p.x>xMax || p.y<yMin || p.y>yMax ||
+                            pixelCluster[idx] != CLUSTER_NULL){ continue; }
 
                         pixelCluster[idx] = clusters.size();
-                        data.push_back(point(x, y));
+                        data.push_back(p);
                     }
                 }
                 currIndex++;

@@ -187,34 +187,6 @@ static void enlarge_ntuple_list(ntuple_list n_tuple)
 }
 
 /*----------------------------------------------------------------------------*/
-/** Add a 7-tuple to an n-tuple list.
- */
-static void add_7tuple(ntuple_list out, double v1, double v2, double v3,
-                       double v4, double v5, double v6, double v7)
-{
-    /* check parameters */
-    if (out == NULL) error("add_7tuple: invalid n-tuple input.");
-    if (out->dim != 7) error("add_7tuple: the n-tuple must be a 7-tuple.");
-
-    /* if needed, alloc more tuples to 'out' */
-    if (out->size == out->max_size) enlarge_ntuple_list(out);
-    if (out->values == NULL) error("add_7tuple: invalid n-tuple input.");
-
-    /* add new 7-tuple */
-    out->values[out->size * out->dim + 0] = v1;
-    out->values[out->size * out->dim + 1] = v2;
-    out->values[out->size * out->dim + 2] = v3;
-    out->values[out->size * out->dim + 3] = v4;
-    out->values[out->size * out->dim + 4] = v5;
-    out->values[out->size * out->dim + 5] = v6;
-    out->values[out->size * out->dim + 6] = v7;
-
-    /* update number of tuples counter */
-    out->size++;
-}
-
-
-/*----------------------------------------------------------------------------*/
 /*----------------------------- Image Data Types -----------------------------*/
 /*----------------------------------------------------------------------------*/
 
@@ -267,61 +239,6 @@ image_char new_image_char_ini(unsigned int xsize, unsigned int ysize,
     /* check parameters */
     if (image == NULL || image->data == NULL)
         error("new_image_char_ini: invalid image.");
-
-    /* initialize */
-    for (i = 0; i < N; i++) image->data[i] = fill_value;
-
-    return image;
-}
-
-/*----------------------------------------------------------------------------*/
-/** int image data type
-
-  The pixel value at (x,y) is accessed by:
-
-  image->data[ x + y * image->xsize ]
-
-  with x and y integer.
-  */
-typedef struct image_int_s
-{
-    int * data;
-    unsigned int xsize, ysize;
-} *image_int;
-
-/*----------------------------------------------------------------------------*/
-/** Create a new image_int of size 'xsize' times 'ysize'.
- */
-static image_int new_image_int(unsigned int xsize, unsigned int ysize)
-{
-    image_int image;
-
-    /* check parameters */
-    if (xsize == 0 || ysize == 0) error("new_image_int: invalid image size.");
-
-    /* get memory */
-    image = (image_int)malloc(sizeof(struct image_int_s));
-    if (image == NULL) error("not enough memory.");
-    image->data = (int *)calloc((size_t)(xsize*ysize), sizeof(int));
-    if (image->data == NULL) error("not enough memory.");
-
-    /* set image size */
-    image->xsize = xsize;
-    image->ysize = ysize;
-
-    return image;
-}
-
-/*----------------------------------------------------------------------------*/
-/** Create a new image_int of size 'xsize' times 'ysize',
-  initialized to the value 'fill_value'.
-  */
-static image_int new_image_int_ini(unsigned int xsize, unsigned int ysize,
-                                   int fill_value)
-{
-    image_int image = new_image_int(xsize, ysize); /* create image */
-    unsigned int N = xsize*ysize;
-    unsigned int i;
 
     /* initialize */
     for (i = 0; i < N; i++) image->data[i] = fill_value;

@@ -31,12 +31,6 @@
 #include <vector>
 #include <cmath>
 
-// parameters for pyramid of images
-const double prec = 3.0;
-const double sigma_scale = 0.8;
-const double scale_step = 2.0;
-const int h_kernel = (unsigned int)ceil(sigma_scale * sqrt(2.0 * prec * log(10.0)));
-
 struct Point2d{
     double x;
     double y;
