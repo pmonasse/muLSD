@@ -126,12 +126,12 @@ Cluster::Cluster(image_double angles, image_double modgrad, const double logNT,
     for (int i = 0; i < dsize; i++){
         data[i] = d[i];
     }
-    nfa = NFA_params(rec.theta, rec.prec);
 
     // compute rectangle
     rect_copy(&r, &rec);
 
     // compute NFA
+    nfa = NFA_params(rec.theta, rec.prec);
     nfa.computeNFA(rec, angles, logNT);
 
     // merging parameters
