@@ -45,7 +45,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
     void * mem_p;
     struct rect rec;
     struct point * reg;
-    int reg_size, min_reg_size, i;
+    int reg_size, min_reg_size;
     unsigned int xsize, ysize;
     double rho, reg_angle, prec, p, log_nfa, logNT;
 
@@ -90,7 +90,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
     /* search for line segments with previous scale information */
     vector<Cluster> refinedLines = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
     /* suppress dense part of gradients (great chance of noisy texture) */
-    denseGradientFilter(noisyTexture, im.w, im.h, angles, used, xsize, ysize, N);
+    //    denseGradientFilter(noisyTexture, im.w, im.h, angles, used, xsize, ysize, N);
 
     /* classical LSD algorithm
     note that for multiscale algo, some pixels are already set as used
@@ -131,21 +131,6 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
                 continue;
             }
 
-            /* A New Line Segment was found! */
-            if (!multiscale){
-                /*
-          The gradient was computed with a 2x2 mask, its value corresponds to
-          points with an offset of (0.5,0.5), that should be added to output.
-          The coordinates origin is at the center of pixel (0,0).
-          */
-                rec.x1 += 0.5; rec.y1 += 0.5;
-                rec.x2 += 0.5; rec.y2 += 0.5;
-
-                /* add line segment found to output */
-                returned_lines.push_back(Segment(rec.x1, rec.y1, rec.x2, rec.y2,
-                                                 rec.width, rec.p, log_nfa, i_scale));
-            }
-
             refinedLines.push_back(Cluster(angles, modgrad, logNT, reg, reg_size, rec, refinedLines.size(), i_scale));
         }
 
@@ -154,7 +139,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
     }
 
     // convert clusters into segments
-    for (int i = 0; i < refinedLines.size(); i++){
+    for (size_t i = 0; i < refinedLines.size(); i++){
         if (refinedLines[i].isMerged()){ continue; }
 
         /* add line segment found to output */
@@ -188,7 +173,7 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
         cout << "#lines = " << segments.size() << endl;
         // upsize segments
         if (i != nScales - 1){
-            for (int j = 0; j < segments.size(); j++){
+            for (size_t j = 0; j < segments.size(); j++){
                 segments[j].upscale(2);
             }
         }
