@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     string picPath;
 
     double segment_length_threshold=0;//0.0009 ;
-    bool multiscale = true;
+    bool multiscale = false;
 
     // options
     cmd.add( make_option('m', multiscale, "multiscale")
