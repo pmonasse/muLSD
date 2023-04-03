@@ -26,7 +26,9 @@
 #define MLSD_HPP
 
 #include "segment.hpp"
-#include "lsd.hpp"
+extern "C" {
+#include "lsd.h"
+}
 #include <set>
 #include <vector>
 #include <cmath>
@@ -71,10 +73,10 @@ class Cluster{
 public:
 
     Cluster();
-    Cluster(image_double angles, image_double modgrad, const double logNT,
-            std::vector<point> &d, const double t, const double p, const int i, const int s, const double n);
-    Cluster(image_double angles, image_double modgrad, const double logNT,
-            point* d, const int dsize, rect &r, const int i, const int s);
+    Cluster(image_double angles, image_double modgrad, double logNT,
+            const std::vector<point> &d, double t, double p, int i, int s, double n);
+    Cluster(image_double angles, double logNT,
+            const point* d, const int dsize, rect &r, int i, int s);
 
     Cluster mergedCluster(const std::vector<Cluster> &clusters, const std::set<int> &indexToMerge,
                           image_double angles, image_double modgrad, const double logNT) const;

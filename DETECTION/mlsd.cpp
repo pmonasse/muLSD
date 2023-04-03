@@ -102,26 +102,27 @@ double NFA_params::getPrec() const{
 
 // Cluster class
 Cluster::Cluster(){}
-Cluster::Cluster(image_double angles, image_double modgrad, const double logNT,
-                 vector<point> &d, const double t, const double p, const int i, const int s, const double n){
+Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
+                 const vector<point>& d, double t, double p,
+                 int idx, int s, double nfaSeparate) {
     data = d;
     nfa = NFA_params(t, p);
 
     // compute rectangle
-    rec = nfa.regionToRect(d, modgrad);
+    rec = nfa.regionToRect(data, modgrad);
 
     // compute NFA
     nfa.computeNFA(rec, angles, logNT);
 
     // merging parameters
-    index = i;
+    index = idx;
     merged = false;
-    nfa_separated_clusters = n;
+    nfa_separated_clusters = nfaSeparate;
     scale = s;
 }
 
-Cluster::Cluster(image_double angles, image_double modgrad, const double logNT,
-                 point* d, const int dsize, rect &r, const int i, const int s){
+Cluster::Cluster(image_double angles, const double logNT,
+                 const point* d, int dsize, rect &r, int idx, int s) {
     data = vector<point>(dsize);
     for (int i = 0; i < dsize; i++){
         data[i] = d[i];
@@ -135,7 +136,7 @@ Cluster::Cluster(image_double angles, image_double modgrad, const double logNT,
     nfa.computeNFA(rec, angles, logNT);
 
     // merging parameters
-    index = i;
+    index = idx;
     merged = false;
     scale = s;
 
@@ -148,9 +149,8 @@ Cluster Cluster::mergedCluster(const vector<Cluster> &clusters, const set<int> &
     vector<point> mergedData = data;
     double nfaSeparatedClusters = nfa.getValue() - log10(double(rec.n + 1));
     for (set<int>::iterator it = indexToMerge.begin(); it != indexToMerge.end(); it++){
-        for (int j = 0; j < clusters[(*it)].data.size(); j++){
+        for (size_t j=0; j<clusters[(*it)].data.size(); j++)
             mergedData.push_back(clusters[(*it)].data[j]);
-        }
         nfaSeparatedClusters += clusters[(*it)].nfa.getValue() - log10(double(clusters[(*it)].rec.n + 1));
     }
     return Cluster(angles, modgrad, logNT, mergedData, nfa.getTheta(), nfa.getPrec(), clusters.size(), scale, nfaSeparatedClusters);
@@ -271,9 +271,8 @@ const vector<point>* Cluster::getData() const{
 }
 
 void Cluster::setUsed(image_char used) const{
-    for (int j = 0; j < data.size(); j++){
+    for (size_t j=0; j<data.size(); j++)
         used->data[data[j].x + data[j].y * used->xsize] = USED;
-    }
 }
 
 void Cluster::setIndex(int i){
@@ -340,15 +339,15 @@ class Rectangle{
 
     void computeAlignedPixels(){
         pixelCluster = vector<int>(height*width, NOTDEF);
-        int count1 = 0, count2 =0;
         for (int x = xMin; x <= xMax; x++){
             for (int y = yMin; y <= yMax; y++){
                 point candidate = {x,y};
-                if (insideRect(p_up, p_down, q_up, q_down, candidate) && x >= 0 && x < angles->xsize && y >= 0 && y < angles->ysize){
-                    if (angles->data[x + y * angles->xsize] != NOTDEF){
-                        count2++;
+                if(insideRect(p_up, p_down, q_up, q_down, candidate) &&
+                    0<=x && (size_t)x<angles->xsize &&
+                    0<=y && (size_t)y < angles->ysize) {
+                    if(angles->data[x + y * angles->xsize] != NOTDEF) {
                         definedPixels.push_back(candidate);
-                        if (angle_diff(angles->data[x + y * angles->xsize], theta) < prec){
+                        if(angle_diff(angles->data[x + y * angles->xsize], theta) < prec) {
                             alignedPixels.push_back(candidate);
                             pixelCluster[pixelToIndex(candidate)] = CLUSTER_NULL;
                         }
@@ -391,8 +390,8 @@ public:
         yMax = height-1;
         pixelCluster = vector<int> (width*height, NOTDEF);
         clusters = c;
-        for (int i = 0; i < clusters.size(); i++){
-            for (int j = 0; j < clusters[i].getData()->size(); j++){
+        for(size_t i = 0; i < clusters.size(); i++){
+            for (size_t j = 0; j < clusters[i].getData()->size(); j++){
                 int idx = pixelToIndex((*clusters[i].getData())[j]);
                 pixelCluster[idx] = clusters[i].getIndex();
             }
@@ -404,7 +403,7 @@ public:
     }
 
     void agregatePixels(){
-        for (int i = 0; i < alignedPixels.size(); i++){
+        for (size_t i = 0; i < alignedPixels.size(); i++){
             int index = pixelToIndex(alignedPixels[i]);
 
             // if pixel already clusterized or has no angle defined go on
@@ -415,8 +414,7 @@ public:
             pixelCluster[index] = clusters.size();
 
             // growing region from the current pixel
-            int currIndex = 0;
-            while (data.size() > currIndex){
+            for(size_t currIndex=0; currIndex<data.size(); ++currIndex) {
                 point seed = data[currIndex];
                 // look inside 4-neighbourhood
                 for (int dx = -1; dx <= 1; dx++){
@@ -434,13 +432,11 @@ public:
                         data.push_back(p);
                     }
                 }
-                currIndex++;
             }
             // suppress clusters with too few pixels
             if (data.size() <= 10){
-                for(int j = 0; j < data.size(); j++){
+                for(size_t j=0; j<data.size(); j++)
                     pixelCluster[pixelToIndex(data[j])] = NOTDEF;
-                }
                 continue;
             }
 
@@ -455,13 +451,12 @@ public:
         {
             vector<Cluster> tempClusterStack = clusters;
             std::sort(tempClusterStack.begin(), tempClusterStack.end(), compareClusters);
-            for (int i = 0; i < clusterStack.size(); i++){
+            for (size_t i=0; i<clusterStack.size(); i++)
                 clusterStack[i] = tempClusterStack[i].getIndex();
-            }
         }
 
         // merge clusters if necessary
-        for (int i = 0; i < clusterStack.size(); i++){
+        for (size_t i=0; i<clusterStack.size(); i++) {
             int currIndex = clusterStack[i];
             Cluster& c = clusters[currIndex];
 
@@ -527,7 +522,7 @@ public:
             clusters.push_back(megaCluster);
 
             // labelize clustered points with their new label
-            for (int j = 0; j < megaCluster.getData()->size(); j++){
+            for (size_t j=0; j<megaCluster.getData()->size(); j++) {
                 const point& p = (*megaCluster.getData())[j];
                 /// because of width reduction, there can be some issue
                 if (p.x<xMin || p.x>xMax || p.y<yMin || p.y>yMax){ continue; }
@@ -537,12 +532,12 @@ public:
     }
 
     bool keepCorrectLines(vector<Cluster> &refinedLines, image_char used, const double log_eps, const bool post_lsd){
-        const int nRefinedLines = refinedLines.size();
-        for (int i = 0; i < clusters.size(); i++){
+        const size_t nRefinedLines = refinedLines.size();
+        for (size_t i=0; i<clusters.size(); i++) {
             // cluster has been merged and has no more meaning
-            if (clusters[i].isMerged()){ continue; }
+            if (clusters[i].isMerged()) continue;
             // NFA is too low
-            if (clusters[i].getNFA() <= log_eps) { continue; }
+            if (clusters[i].getNFA() <= log_eps) continue;
 
             clusters[i].setUsed(used);
             clusters[i].setIndex(refinedLines.size());
@@ -551,9 +546,8 @@ public:
 
         // if no lines kept return false and set pixels to used to avoid useless computation
         if (!post_lsd && nRefinedLines == refinedLines.size()){
-            for (int j = 0; j < definedPixels.size(); j++){
-                used->data[definedPixels[j].x + definedPixels[j].y * used->xsize] = USED;
-            }
+            for (size_t j=0; j<definedPixels.size(); j++)
+                used->data[definedPixels[j].x + definedPixels[j].y*used->xsize] = USED;
             return false;
         }
 
@@ -566,9 +560,7 @@ vector<Cluster> refineRawSegments(const vector<Segment> &rawSegments, vector<Seg
                                   image_double angles, image_double modgrad, image_char used,
                                   const double logNT, const double log_eps){
     vector<Cluster> refinedLines;
-    const int xsize = angles->xsize;
-    const int ysize = angles->ysize;
-    for (int i_line = 0; i_line < rawSegments.size(); i_line++){
+    for (size_t i_line=0; i_line<rawSegments.size(); i_line++){
         if (rawSegments[i_line].scale != i_scale - 1){
             finalLines.push_back(rawSegments[i_line]);
             continue;
@@ -601,10 +593,10 @@ void mergeSegments(vector<Cluster> &refinedLines, const double segment_length_th
                    image_double angles, image_double modgrad, image_char &used,
                    const double logNT, const double log_eps){
     // filter refinedLines wrt segment line
-    {
+    if(segment_length_threshold>0) {
         vector<Cluster> temp;
-        for (int i = 0; i < refinedLines.size(); i++){
-            if (refinedLines[i].length() > segment_length_threshold){
+        for (size_t i=0; i<refinedLines.size(); i++) {
+            if(refinedLines[i].length() > segment_length_threshold) {
                 refinedLines[i].setIndex(temp.size());
                 temp.push_back(refinedLines[i]);
             }
@@ -625,8 +617,6 @@ void denseGradientFilter(vector<int> &noisyTexture, int w, int h,
         noisyTexture = vector<int>(N, 0);
         const int size_kernel = max(ceil(0.01*(w+h)/4), 5.0); // 0.5% of image size
         const int step = size_kernel/2;
-        const int nX = xsize-step;
-        const int nY = ysize-step;
         const double thresh_noise =0.99;
         // integral image for faster computation
         vector<double> integral_image(N);

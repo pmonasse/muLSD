@@ -131,7 +131,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
                 continue;
             }
 
-            refinedLines.push_back(Cluster(angles, modgrad, logNT, reg, reg_size, rec, refinedLines.size(), i_scale));
+            refinedLines.push_back(Cluster(angles, logNT, reg, reg_size, rec, refinedLines.size(), i_scale));
         }
 
     if (multiscale){
@@ -166,9 +166,8 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
     vector<int> noisyTexture(0);
 
     for (int i = 0; i < nScales; i++){
-        //const float lengthThresh = /*thresh*/(imagePyramid[i]->h + imagePyramid[i]->w)*0.5f;
-        const float lengthThresh = std::min(imagePyramid[i]->h,imagePyramid[i]->w)/std::max(imagePyramid[i]->h,imagePyramid[i]->w);
-        std::cout<<"length thresh="<<lengthThresh<<std::endl;
+        const float lengthThresh = thresh * (imagePyramid[i]->h + imagePyramid[i]->w)*0.5f;
+        std::cout << "length thresh=" << lengthThresh << std::endl;
         cout << "scale step: " << i << endl;
         segments = LineSegmentDetection(*imagePyramid[i], noisyTexture, segments,4, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
         cout << "#lines = " << segments.size() << endl;

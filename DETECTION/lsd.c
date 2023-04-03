@@ -27,7 +27,7 @@
 
   ----------------------------------------------------------------------------*/
 
-#include "lsd.hpp"
+#include "lsd.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>

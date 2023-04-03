@@ -18,16 +18,16 @@ else(PNG_FOUND)
 endif(PNG_FOUND)
 include_directories(${PNG_INCLUDE_DIRS})
 
-INCLUDE_DIRECTORIES(. DETECTION)
+include_directories(. DETECTION)
 		
 SET(LINE_DETECTION
-  DETECTION/lsd.cpp	DETECTION/lsd.hpp
+  DETECTION/lsd.c DETECTION/lsd.h
   DETECTION/segment.hpp DETECTION/segment.cpp
-  DETECTION/mlsd.cpp	DETECTION/mlsd.hpp
+  DETECTION/mlsd.cpp DETECTION/mlsd.hpp
   DETECTION/detection.cpp DETECTION/detection.hpp)
 
 # MULTISCALE LSD
-ADD_EXECUTABLE(LSD_MULTISCALE ${LINE_DETECTION}
+add_executable(LSD_MULTISCALE ${LINE_DETECTION}
   io_png.c io_png.h
   image.cpp image.h
   main_detection.cpp)
@@ -39,4 +39,4 @@ add_executable(test_pyramid test_pyramid.cpp io_png.h io_png.c image.h image.cpp
 target_compile_options(test_pyramid PRIVATE -Wall -Wextra)
 target_link_libraries(test_pyramid PRIVATE ${PNG_LIBRARIES})
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
