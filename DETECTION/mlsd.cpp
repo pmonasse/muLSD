@@ -463,32 +463,34 @@ public:
         // merge clusters if necessary
         for (int i = 0; i < clusterStack.size(); i++){
             int currIndex = clusterStack[i];
+            Cluster& c = clusters[currIndex];
 
-            if (clusters[currIndex].isMerged()){ continue; }
+            if (c.isMerged()){ continue; }
             // define line of intersection
-            Point2d c = clusters[currIndex].getCenter();
-            Point2d step = clusters[currIndex].getSlope();
+            const Point2d center = c.getCenter();
+            const Point2d step = c.getSlope();
+            const double theta = c.getTheta();
+            const double prec = c.getPrec();
 
             // find clusters intersecting with current cluster direction
-            set<int> intersectedClusters;
+            set<int> intersect;
             for (int s = -1; s <= 1; s += 2){
-                Point2d cur_p = c;
-                Point2d signed_step = s*step;
+                const Point2d signed_step = s*step;
+                const int cidx = c.getIndex();
                 bool added = false;
+                Point2d p = center;
                 while (true){
-                    cur_p = cur_p + signed_step;
-
-                    int X = floor(cur_p.x + 0.5);
-                    int Y = floor(cur_p.y + 0.5);
-
+                    p = p + signed_step;
+                    int X = floor(p.x + 0.5);
+                    int Y = floor(p.y + 0.5);
                     if (X < xMin || X > xMax || Y < yMin || Y > yMax){ break; }
-                    int idx = pixelToIndex(X, Y);
-                    if (pixelCluster[idx] != NOTDEF && pixelCluster[idx] != clusters[currIndex].getIndex() && !clusters[pixelCluster[idx]].isMerged()){
-                        if(post_lsd && angle_diff(clusters[pixelCluster[idx]].getTheta(), clusters[currIndex].getTheta() ) > clusters[currIndex].getPrec()){
-                            continue;
-                        }
 
-                        intersectedClusters.insert(pixelCluster[idx]);
+                    int idx = pixelCluster[pixelToIndex(X, Y)];
+                    if (idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()){
+                        if(post_lsd && angle_diff(clusters[idx].getTheta(), theta ) > prec)
+                            continue;
+
+                        intersect.insert(idx);
                         added = true;
                     }
 
@@ -497,25 +499,25 @@ public:
                 }
             }
             // if no cluster intersections
-            if (intersectedClusters.size() == 0){continue;}
+            if (intersect.empty()) { continue; }
 
             // compute merged cluster
             Cluster megaCluster;
 
             if (!post_lsd){
-                megaCluster = clusters[currIndex].mergedCluster(clusters, intersectedClusters, angles, modgrad, logNT);
+                megaCluster = c.mergedCluster(clusters, intersect, angles, modgrad, logNT);
                 if (!megaCluster.isToMerge(angles, logNT)){continue;}
                 // labelize merged clusters as merged
-                for (set<int>::iterator it = intersectedClusters.begin(); it != intersectedClusters.end(); it++){
+                for (set<int>::iterator it = intersect.begin(); it != intersect.end(); it++){
                     clusters[(*it)].setMerged();
                 }
             }
             else{
                 bool toMerge = false;
-                for (set<int>::iterator it = intersectedClusters.begin(); it != intersectedClusters.end() && !toMerge; it++){
+                for (set<int>::iterator it = intersect.begin(); it != intersect.end() && !toMerge; it++){
                     set<int> temp;
                     temp.insert(*it);
-                    megaCluster = clusters[currIndex].mergedCluster(clusters, temp, angles, modgrad, logNT);
+                    megaCluster = c.mergedCluster(clusters, temp, angles, modgrad, logNT);
 
                     toMerge = megaCluster.isToMerge(angles, logNT);
                     // labelize merged clusters as merged
@@ -527,15 +529,16 @@ public:
                 if (!toMerge){continue;}
             }
 
+            c.setMerged();
             clusterStack.push_back(clusters.size());
             clusters.push_back(megaCluster);
-            clusters[currIndex].setMerged();
 
             // labelize clustered points with their new label
             for (int j = 0; j < megaCluster.getData()->size(); j++){
+                const point& p = (*megaCluster.getData())[j];
                 /// because of width reduction, there can be some issue
-                if ((*megaCluster.getData())[j].x < xMin || (*megaCluster.getData())[j].x > xMax || (*megaCluster.getData())[j].y < yMin || (*megaCluster.getData())[j].y > yMax){ continue; }
-                pixelCluster[pixelToIndex((*megaCluster.getData())[j])] = megaCluster.getIndex();
+                if (p.x<xMin || p.x>xMax || p.y<yMin || p.y>yMax){ continue; }
+                pixelCluster[pixelToIndex(p)] = megaCluster.getIndex();
             }
         }
     }
