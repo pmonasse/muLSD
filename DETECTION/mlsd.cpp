@@ -449,7 +449,7 @@ public:
         }
     }
 
-    void mergeClusters(const bool post_lsd){
+    void mergeClusters(const bool post_lsd) {
         // sort clusters by NFA
         vector<int> clusterStack(clusters.size());
         {
@@ -477,7 +477,6 @@ public:
             for (int s = -1; s <= 1; s += 2){
                 const Point2d signed_step = s*step;
                 const int cidx = c.getIndex();
-                bool added = false;
                 Point2d p = center;
                 while (true){
                     p = p + signed_step;
@@ -491,11 +490,9 @@ public:
                             continue;
 
                         intersect.insert(idx);
-                        added = true;
+                        // Post lsd processing: only look for next neighbor?
+                        if(post_lsd) break;
                     }
-
-                    // in case of post lsd processing, we only look for next neighbor ?
-                    if(post_lsd && added){ break;}
                 }
             }
             // if no cluster intersections
@@ -504,29 +501,25 @@ public:
             // compute merged cluster
             Cluster megaCluster;
 
-            if (!post_lsd){
+            set<int>::const_iterator it=intersect.begin(), end=intersect.end();
+            if(!post_lsd) {
                 megaCluster = c.mergedCluster(clusters, intersect, angles, modgrad, logNT);
-                if (!megaCluster.isToMerge(angles, logNT)){continue;}
+                if (! megaCluster.isToMerge(angles, logNT)) continue;
                 // labelize merged clusters as merged
-                for (set<int>::iterator it = intersect.begin(); it != intersect.end(); it++){
+                for (; it!=end; it++)
                     clusters[(*it)].setMerged();
-                }
-            }
-            else{
+            } else {
                 bool toMerge = false;
-                for (set<int>::iterator it = intersect.begin(); it != intersect.end() && !toMerge; it++){
+                for(; it!=end && !toMerge; it++) {
                     set<int> temp;
                     temp.insert(*it);
                     megaCluster = c.mergedCluster(clusters, temp, angles, modgrad, logNT);
-
                     toMerge = megaCluster.isToMerge(angles, logNT);
                     // labelize merged clusters as merged
-                    if (toMerge){
+                    if(toMerge)
                         clusters[(*it)].setMerged();
-                    }
-
                 }
-                if (!toMerge){continue;}
+                if(! toMerge) continue;
             }
 
             c.setMerged();
