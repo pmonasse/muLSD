@@ -154,6 +154,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
     free_image_double(modgrad);
     free_image_char(used);
     free((void *)mem_p);
+    free(reg);
 
     return returned_lines;
 }
