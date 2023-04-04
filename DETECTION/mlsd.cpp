@@ -24,6 +24,7 @@
 
 #include "mlsd.hpp"
 #include <algorithm>
+#include <numeric>
 
 using namespace std;
 
@@ -279,7 +280,13 @@ void Cluster::setIndex(int i){
     index = i;
 }
 
-bool compareClusters(Cluster ci, Cluster cj) { return (ci.getNFA() > cj.getNFA()); }
+// Functor to sort clusters by decreasing NFA value.
+class CompareClusters {
+    const std::vector<Cluster>& c;
+public:
+    CompareClusters(const std::vector<Cluster>& v): c(v) {}
+    bool operator()(int i, int j) const { return c[i].getNFA()>c[j].getNFA(); }
+};
 
 class Rectangle{
     const int CLUSTER_NULL = -1;
@@ -446,14 +453,11 @@ public:
     }
 
     void mergeClusters(const bool post_lsd) {
-        // sort clusters by NFA
+        // sort clusters by decreasing NFA
         vector<int> clusterStack(clusters.size());
-        {
-            vector<Cluster> tempClusterStack = clusters;
-            std::sort(tempClusterStack.begin(), tempClusterStack.end(), compareClusters);
-            for (size_t i=0; i<clusterStack.size(); i++)
-                clusterStack[i] = tempClusterStack[i].getIndex();
-        }
+        std::iota(clusterStack.begin(), clusterStack.end(), 0);
+        std::sort(clusterStack.begin(), clusterStack.end(),
+                  CompareClusters(clusters));
 
         // merge clusters if necessary
         for (size_t i=0; i<clusterStack.size(); i++) {
