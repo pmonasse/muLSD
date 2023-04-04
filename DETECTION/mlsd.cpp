@@ -298,31 +298,37 @@ class Rectangle{
     double logNT;
 
     // rectangle parameters
-    int width, height;
-    int xMin, xMax, yMin, yMax;
+    int width; 
+    int xMin, xMax, yMin, yMax; // Axis-aligned bounding box
     Point2d p_up, p_down, q_up, q_down;
 
     // aligned pixels
     double theta, prec;
     // otherwise delete definedPixels
-    vector<point> alignedPixels, definedPixels;
+    vector<point> alignedPixels;
+    vector<int> definedPixels;
     vector<int> pixelCluster;
 
     // clusters of pixels
     vector<Cluster> clusters;
 
     // conversion from 2D point to 1D index
-    inline
-    int pixelToIndex(const point &p){
-        return (p.x - xMin)*height + (p.y - yMin);
+    int pixelToIndex(int x, int y) const {
+        return (x-xMin) + (y-yMin)*width;
     }
-    inline
-    int pixelToIndex(const int x, const int y){
-        return (x - xMin)*height + (y - yMin);
+    int pixelToIndex(const point &p) const {
+        return pixelToIndex(p.x,p.y);
+    }
+    int sizeBB() const { return width*(yMax-yMin+1); }
+    bool inBB(int x, int y) const {
+        return (xMin<=x && x<=xMax && yMin<=y && y<=yMax);
+    }
+    bool inBB(const point& p) const {
+        return inBB(p.x,p.y);
     }
 
     void computeRectangle(const Segment &rawSegment){
-        Point2d P(rawSegment.x1, rawSegment.y1), Q(rawSegment.x2, rawSegment.y2);
+        Point2d P(rawSegment.x1,rawSegment.y1), Q(rawSegment.x2,rawSegment.y2);
 
         // compute rectangle extremities
         double length = rawSegment.length;
@@ -330,33 +336,32 @@ class Rectangle{
         double dy = Q.y - P.y;
         double dW = (rawSegment.width / 2 + 1) / length;
 
-        p_up = Point2d(P.x + dW*dy - dx / length, P.y - dW*dx - dy / length);
+        p_up   = Point2d(P.x + dW*dy - dx / length, P.y - dW*dx - dy / length);
         p_down = Point2d(P.x - dW*dy - dx / length, P.y + dW*dx - dy / length);
-        q_up = Point2d(Q.x + dW*dy + dx / length, Q.y - dW*dx + dy / length);
+        q_up   = Point2d(Q.x + dW*dy + dx / length, Q.y - dW*dx + dy / length);
         q_down = Point2d(Q.x - dW*dy + dx / length, Q.y + dW*dx + dy / length);
 
         // compute min/max along x/y axis
-        xMin = floor(double(min(min(p_up.x, p_down.x), min(q_up.x, q_down.x))));
-        xMax = ceil(double(max(max(p_up.x, p_down.x), max(q_up.x, q_down.x))));
-        yMin = floor(double(min(min(p_up.y, p_down.y), min(q_up.y, q_down.y))));
-        yMax = ceil(double(max(max(p_up.y, p_down.y), max(q_up.y, q_down.y))));
-        width = xMax - xMin + 1;
-        height = yMax - yMin + 1;
+        xMin = max((int)floor(min({p_up.x, p_down.x, q_up.x, q_down.x})),0);
+        xMax = min((int)ceil (max({p_up.x, p_down.x, q_up.x, q_down.x})),
+                   (int)angles->xsize-1);
+        yMin = max((int)floor(min({p_up.y, p_down.y, q_up.y, q_down.y})),0);
+        yMax = min((int)ceil (max({p_up.y, p_down.y, q_up.y, q_down.y})),
+                   (int)angles->ysize-1);
+        width = xMax-xMin+1;
     }
 
-    void computeAlignedPixels(){
-        pixelCluster = vector<int>(height*width, NOTDEF);
-        for (int x = xMin; x <= xMax; x++){
-            for (int y = yMin; y <= yMax; y++){
-                point candidate = {x,y};
-                if(insideRect(p_up, p_down, q_up, q_down, candidate) &&
-                    0<=x && (size_t)x<angles->xsize &&
-                    0<=y && (size_t)y < angles->ysize) {
-                    if(angles->data[x + y * angles->xsize] != NOTDEF) {
-                        definedPixels.push_back(candidate);
-                        if(angle_diff(angles->data[x + y * angles->xsize], theta) < prec) {
-                            alignedPixels.push_back(candidate);
-                            pixelCluster[pixelToIndex(candidate)] = CLUSTER_NULL;
+    void computeAlignedPixels() {
+        pixelCluster = vector<int>(sizeBB(), NOTDEF);
+        for(point p = {xMin,yMin}; p.y<=yMax; p.y++) {
+            for(p.x=xMin; p.x<=xMax; p.x++) {
+                if(insideRect(p_up, p_down, q_up, q_down, p)) {
+                    int i = p.x + p.y*angles->xsize;
+                    if(angles->data[i] != NOTDEF) {
+                        definedPixels.push_back(i);
+                        if(angle_diff(angles->data[i], theta) < prec) {
+                            alignedPixels.push_back(p);
+                            pixelCluster[pixelToIndex(p)] = CLUSTER_NULL;
                         }
                     }
                 }
@@ -390,12 +395,11 @@ public:
 
         scale = s;
 
-        width = a->xsize;
-        height = a->ysize;
+        width = (int)a->xsize;
         xMin = yMin = 0;
-        xMax = width-1;
-        yMax = height-1;
-        pixelCluster = vector<int> (width*height, NOTDEF);
+        xMax = a->xsize-1;
+        yMax = a->ysize-1;
+        pixelCluster = vector<int>(sizeBB(), NOTDEF);
         clusters = c;
         for(size_t i = 0; i < clusters.size(); i++){
             for (size_t j = 0; j < clusters[i].getData()->size(); j++){
@@ -423,17 +427,16 @@ public:
             // growing region from the current pixel
             for(size_t currIndex=0; currIndex<data.size(); ++currIndex) {
                 point seed = data[currIndex];
-                // look inside 4-neighbourhood
-                for (int dx = -1; dx <= 1; dx++){
-                    for (int dy = -1; dy <= 1; dy++){
-                        if (dx == 0 && dy == 0){ continue; }
-
+                // look inside 8-neighbourhood
+                for (int dx=-1; dx<=1; dx++) {
+                    for (int dy=-1; dy<=1; dy++) {
+                        if(dx==0 && dy==0) continue;
                         point p = {seed.x + dx, seed.y + dy};
-                        int idx = pixelToIndex(p.x, p.y);
+                        int idx = pixelToIndex(p);
 
                         // add neighbor that have correct gradient directions and is not already in the cluster
-                        if (p.x<xMin || p.x>xMax || p.y<yMin || p.y>yMax ||
-                            pixelCluster[idx] != CLUSTER_NULL){ continue; }
+                        if (!inBB(p) || pixelCluster[idx]!=CLUSTER_NULL)
+                            continue;
 
                         pixelCluster[idx] = clusters.size();
                         data.push_back(p);
@@ -481,11 +484,12 @@ public:
                     p = p + signed_step;
                     int X = floor(p.x + 0.5);
                     int Y = floor(p.y + 0.5);
-                    if (X < xMin || X > xMax || Y < yMin || Y > yMax){ break; }
+                    if(! inBB(X,Y)) break;
 
-                    int idx = pixelCluster[pixelToIndex(X, Y)];
+                    int idx = pixelCluster[pixelToIndex(X,Y)];
                     if (idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()){
-                        if(post_lsd && angle_diff(clusters[idx].getTheta(), theta ) > prec)
+                        if(post_lsd &&
+                           angle_diff(clusters[idx].getTheta(),theta) > prec)
                             continue;
 
                         intersect.insert(idx);
@@ -528,9 +532,8 @@ public:
             // labelize clustered points with their new label
             for (size_t j=0; j<megaCluster.getData()->size(); j++) {
                 const point& p = (*megaCluster.getData())[j];
-                /// because of width reduction, there can be some issue
-                if (p.x<xMin || p.x>xMax || p.y<yMin || p.y>yMax){ continue; }
-                pixelCluster[pixelToIndex(p)] = megaCluster.getIndex();
+                if(inBB(p)) // due to width reduction, there can be some issue
+                    pixelCluster[pixelToIndex(p)] = megaCluster.getIndex();
             }
         }
     }
@@ -551,7 +554,7 @@ public:
         // if no lines kept return false and set pixels to used to avoid useless computation
         if (!post_lsd && nRefinedLines == refinedLines.size()){
             for (size_t j=0; j<definedPixels.size(); j++)
-                used->data[definedPixels[j].x + definedPixels[j].y*used->xsize] = USED;
+                used->data[definedPixels[j]] = USED;
             return false;
         }
 
