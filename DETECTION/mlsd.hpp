@@ -41,14 +41,12 @@ struct Point2d{
 };
 
 class NFA_params{
-    double value, theta, prec_divided_by_pi, prec;
+    double value, theta, prec;
     bool computed;
 public:
     NFA_params();
     NFA_params(const double t, const double p);
-    NFA_params(const NFA_params &n);
 
-    rect regionToRect(std::vector<point> &data, image_double modgrad);
     void computeNFA(rect &rec, image_double angles, const double logNT);
 
     double getValue() const;
@@ -67,23 +65,23 @@ class Cluster{
 
     // fusion parameters
     int index;
-    bool merged;
     int scale;
+    bool merged;
 
 public:
-
     Cluster();
     Cluster(image_double angles, image_double modgrad, double logNT,
-            const std::vector<point> &d, double t, double p, int i, int s, double n);
+            const std::vector<point>& d, double t, double p, int i, int s,
+            double nfaSeparate);
     Cluster(image_double angles, double logNT,
             const point* d, const int dsize, rect &r, int i, int s);
 
-    Cluster mergedCluster(const std::vector<Cluster> &clusters, const std::set<int> &indexToMerge,
-                          image_double angles, image_double modgrad, const double logNT) const;
-    bool isToMerge(image_double angles, const double logNT);
+    Cluster mergedCluster(const std::vector<Cluster>& clusters, const std::set<int>& indexToMerge,
+                          image_double angles, image_double modgrad, double logNT) const;
+    bool isToMerge(image_double angles, double logNT);
 
     double length() const;
-    Segment toSegment();
+    Segment toSegment() const;
 
     bool isMerged() const;
     void setMerged();
@@ -92,9 +90,9 @@ public:
     int getScale() const;
     double getTheta() const;
     double getPrec() const;
-  Point2d getCenter() const;
+    Point2d getCenter() const;
     Point2d getSlope() const;
-    const std::vector<point>* getData() const;
+    const std::vector<point>& getData() const;
     void setUsed(image_char used) const;
     void setIndex(int i);
 };
@@ -102,17 +100,21 @@ public:
 // filter some area in the image for better SfM results and a faster line detection
 void denseGradientFilter(std::vector<int> &noisyTexture, int w, int h, 
                          const image_double &angles, const image_char &used,
-                         const int xsize, const int ysize, const int N);
+                         int xsize, int ysize, int N);
 
 // compute the segments at current scale with information from previous scale
-std::vector<Cluster> refineRawSegments(const std::vector<Segment> &rawSegments, std::vector<Segment> &finalLines, const int i_scale,
-                                  image_double angles, image_double modgrad, image_char used,
-                                  const double logNT, const double log_eps);
+std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
+                                       std::vector<Segment> &finalLines,
+                                       int i_scale,
+                                       image_double angles,
+                                       image_double modgrad, image_char used,
+                                       double logNT, double log_eps);
 
 // merge segments at same scale that belong to the same line
-void mergeSegments(std::vector<Cluster> &refinedLines, const double segment_length_threshold, const int i_scale,
-                   image_double angles, image_double modgrad, image_char &used,
-                   const double logNT, const double log_eps);
+void mergeSegments(std::vector<Cluster>& refinedLines,
+                   double segment_length_threshold, int i_scale,
+                   image_double angles, image_double modgrad, image_char& used,
+                   double logNT, double log_eps);
 
 #endif /* !MULTISCALE_LSD_HEADER */
 /*----------------------------------------------------------------------------*/
