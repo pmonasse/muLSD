@@ -295,11 +295,11 @@ class Rectangle{
 
     // angles info pointers
     image_double angles, modgrad;
-    int logNT;
+    double logNT;
 
     // rectangle parameters
     int width, height;
-    double xMin, xMax, yMin, yMax;
+    int xMin, xMax, yMin, yMax;
     Point2d p_up, p_down, q_up, q_down;
 
     // aligned pixels
