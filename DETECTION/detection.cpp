@@ -88,7 +88,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
     reg = (struct point *) calloc((size_t)(xsize*ysize), sizeof(struct point));
 
     /* search for line segments with previous scale information */
-    vector<Cluster> refinedLines = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
+    vector<Cluster> clusters = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
     /* suppress dense part of gradients (great chance of noisy texture) */
     //    denseGradientFilter(noisyTexture, im.w, im.h, angles, used, xsize, ysize, N);
 
@@ -131,25 +131,19 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
                 continue;
             }
 
-            refinedLines.push_back(Cluster(angles, logNT, reg, reg_size, rec, refinedLines.size(), i_scale));
+            clusters.push_back(Cluster(angles, logNT, reg, reg_size, rec,
+                                       clusters.size(), i_scale));
         }
 
-    if (multiscale){
-        mergeSegments(refinedLines, segment_length_threshold, i_scale, angles, modgrad, used, logNT, log_eps);
-    }
+    if(multiscale)
+        mergeSegments(clusters, segment_length_threshold, i_scale,
+                      angles, modgrad, used, logNT, log_eps);
 
     // convert clusters into segments
-    for (size_t i = 0; i < refinedLines.size(); i++){
-        if (refinedLines[i].isMerged()){ continue; }
+    for(size_t i=0; i<clusters.size(); i++)
+        if(! clusters[i].isMerged())
+            returned_lines.push_back(clusters[i].toSegment());
 
-        /* add line segment found to output */
-        returned_lines.push_back(refinedLines[i].toSegment());
-    }
-
-    /* free memory */
-    /* only the double_image structure should be freed,
-                the data pointer was provided to this functions
-                and should not be destroyed.                 */
     free_image_double(angles);
     free_image_double(modgrad);
     free_image_char(used);

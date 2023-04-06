@@ -27,6 +27,126 @@
 #include <numeric>
 using namespace std;
 
+/// Minimum number of pixels for a valid cluster
+static const int MIN_SIZE_CLUSTER=10;
+
+// --- NFA_params class ---
+
+NFA_params::NFA_params(double t, double p)
+: theta(t), prec(p), computed(false) {}
+
+void NFA_params::computeNFA(rect& rec, image_double angles, double logNT) {
+    value = rect_nfa(&rec, angles, logNT);
+    computed = true;
+}
+
+double NFA_params::getValue() const {
+    if(! computed) std::cerr << "ERROR in NFA computation" << std::endl;
+    return value;
+}
+
+// --- Cluster class ---
+
+/// Create a cluster from a list of pixels. This constructor needs to find
+/// the corresponding rectangle.
+Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
+                 const vector<point>& d, double t, double p,
+                 int idx, int s, double nfaSeparate)
+: pixels(d), nfa(t,p), nfa_separated_clusters(nfaSeparate),
+  index(idx), scale(s), merged(false) {
+    region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
+    nfa.computeNFA(rec, angles, logNT);
+}
+
+/// The rectangle containing the list of pixels is already known (after LSD).
+Cluster::Cluster(image_double angles, double logNT,
+                 const point* d, int dsize, rect& r, int idx, int s)
+: pixels(d,d+dsize), rec(r), nfa(r.theta,r.prec), nfa_separated_clusters(-1),
+  index(idx), scale(s), merged(false) {
+    nfa.computeNFA(rec, angles, logNT);
+}
+
+double Cluster::length() const {
+    return hypot(rec.x1-rec.x2, rec.y1-rec.y2);
+}
+
+Segment Cluster::toSegment() const {
+    return Segment(rec.x1 + 0.5, rec.y1 + 0.5, rec.x2 + 0.5, rec.y2 + 0.5,
+                   rec.width, rec.p, nfa.getValue(), scale);
+}
+
+void Cluster::setUsed(image_char& used) const {
+    for(size_t j=0; j<pixels.size(); j++)
+        used->data[pixels[j].x + pixels[j].y*used->xsize] = USED;
+}
+
+Cluster Cluster::mergedCluster(const vector<Cluster>& clusters,
+                               const set<int>& indexMerge,
+                               image_double angles, image_double modgrad,
+                               double logNT) const {
+    // merge pixel sets
+    vector<point> mergedPixels = pixels;
+    double nfaSeparated = nfa.getValue() - log10(rec.n+1);
+    for(set<int>::iterator it=indexMerge.begin(); it!=indexMerge.end(); it++) {
+        const Cluster& c = clusters[*it];
+        mergedPixels.insert(mergedPixels.end(),c.pixels.begin(),c.pixels.end());
+        nfaSeparated += c.nfa.getValue()-log10(clusters[*it].rec.n + 1);
+    }
+    return Cluster(angles, modgrad, logNT, mergedPixels, nfa.getTheta(),
+                   nfa.getPrec(), clusters.size(), scale,
+                   nfaSeparated);
+}
+
+/// Check with log(nfa) if the current cluster is better merged.
+bool Cluster::isToMerge(image_double angles, double logNT) {
+    int N = rec.width;
+    int M = length();
+    double diff_binom = -(5 / 2 * log10(double(N*M)) - log10(2.0)) + nfa_separated_clusters + log10(double(rec.n + 1));
+    double fusion_score = diff_binom - nfa.getValue();
+
+    if (fusion_score > 0) {
+        /* try to reduce width */
+        const double delta = 0.5;
+        NFA_params nfa_optimized(nfa);
+        rect reduce_rec = rec;
+        for(int n=0; n<5; n++) {
+            if(reduce_rec.width-delta>=0.5) {
+                reduce_rec.width -= delta;
+                nfa_optimized.computeNFA(reduce_rec, angles, logNT);
+                if (nfa_optimized.getValue() > nfa.getValue()){
+                    rec = reduce_rec;
+                    fusion_score = diff_binom - nfa_optimized.getValue();
+                    if(fusion_score<0) break;
+                }
+            }
+        }
+        if(fusion_score>0) return false;
+
+        // recompute cluster data
+        pixels.clear();
+        rect_iter* rec_it;
+        for(rec_it=ri_ini(&rec); !ri_end(rec_it); ri_inc(rec_it))
+            if(0<=rec_it->x && rec_it->x<(int)angles->xsize &&
+               0<=rec_it->y && rec_it->y<(int)angles->ysize &&
+               isaligned(rec_it->x,rec_it->y, angles, rec.theta,rec.prec)) {
+                point p = {rec_it->x, rec_it->y};
+                pixels.push_back(p);
+            }
+        ri_del(rec_it);
+    }
+    nfa.computeNFA(rec, angles, logNT);
+    return true;
+}
+
+// --- Point2d class: pixel with double coordinates ---
+
+struct Point2d {
+    double x;
+    double y;
+    Point2d(double X, double Y): x(X), y(Y) {}
+    Point2d() {}
+};
+
 inline void operator+=(Point2d& p, const Point2d& q) {
     p.x += q.x;
     p.y += q.y;
@@ -37,201 +157,30 @@ inline void operator-=(Point2d& p, const point& q) {
     p.y -= q.y;
 }
 
-Point2d operator*(const double d, const Point2d& p) {
+static Point2d operator*(const double d, const Point2d& p) {
     return Point2d(d*p.x, d*p.y);
 }
 
-inline double crossProd(const Point2d &p, const Point2d &q) {
+inline double crossProd(const Point2d &p, const Point2d& q) {
     return p.x*q.y - p.y*q.x;
 }
 
-bool insideRect(Point2d pu, Point2d pd,
-                Point2d qu, Point2d qd, const point &t) {
+static bool insideRect(Point2d pu, Point2d pd,
+                       Point2d qu, Point2d qd, const point& t) {
     pu-=t; pd-=t; qu-=t; qd-=t;
     return crossProd(pu, qu)*crossProd(pd, qd) < 0 &&
            crossProd(pu, pd)*crossProd(qu, qd) < 0;
 }
 
-// --- NFA_params class ---
-
-NFA_params::NFA_params() {
-    computed = false;
+Point2d getCenter(const Cluster& c) {
+    const rect& r = c.rectangle();
+    return Point2d(r.x,r.y);
 }
 
-NFA_params::NFA_params(double t, double p){
-    theta = t;
-    prec = p;
-    computed = false;
-}
-
-void NFA_params::computeNFA(rect &rec, image_double angles, double logNT) {
-    value = rect_nfa(&rec, angles, logNT);
-    computed = true;
-}
-
-double NFA_params::getValue() const {
-    if(! computed) std::cerr << "ERROR in NFA computation" << std::endl;
-    return value;
-}
-
-double NFA_params::getTheta() const {
-    return theta;
-}
-
-double NFA_params::getPrec() const {
-    return prec;
-}
-
-// --- Cluster class ---
-Cluster::Cluster(){}
-
-Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
-                 const vector<point>& d, double t, double p,
-                 int idx, int s, double nfaSeparate)
-: data(d), nfa(t,p), nfa_separated_clusters(nfaSeparate), index(idx), scale(s),
-  merged(false) {
-    // compute rectangle
-    region2rect(data.data(), (int)data.size(), modgrad, t, p, p/M_PI, &rec);
-    nfa.computeNFA(rec, angles, logNT);
-}
-
-Cluster::Cluster(image_double angles, double logNT,
-                 const point* d, int dsize, rect &r, int idx, int s)
-: data(d,d+dsize), rec(r), nfa(r.theta,r.prec), nfa_separated_clusters(-1),
-  index(idx), scale(s), merged(false) {
-    nfa.computeNFA(rec, angles, logNT);
-}
-
-Cluster Cluster::mergedCluster(const vector<Cluster> &clusters,
-                               const set<int>&indexToMerge,
-                               image_double angles, image_double modgrad,
-                               double logNT) const {
-    // merge pixel sets
-    vector<point> mergedData = data;
-    double nfaSeparatedClusters = nfa.getValue() - log10(double(rec.n + 1));
-    for (set<int>::iterator it = indexToMerge.begin(); it != indexToMerge.end(); it++){
-        for (size_t j=0; j<clusters[(*it)].data.size(); j++)
-            mergedData.push_back(clusters[(*it)].data[j]);
-        nfaSeparatedClusters += clusters[(*it)].nfa.getValue() - log10(double(clusters[(*it)].rec.n + 1));
-    }
-    return Cluster(angles, modgrad, logNT, mergedData, nfa.getTheta(),
-                   nfa.getPrec(), clusters.size(), scale,
-                   nfaSeparatedClusters);
-}
-
-bool Cluster::isToMerge(image_double angles, double logNT) {
-    // check with log_nfa
-    int N = rec.width;
-    double dx = rec.x1 - rec.x2;
-    double dy = rec.y1 - rec.y2;
-    int M = sqrt(dx*dx + dy*dy);
-    double diff_binom = -(5 / 2 * log10(double(N*M)) - log10(2.0)) + nfa_separated_clusters + log10(double(rec.n + 1));
-    double fusion_score = diff_binom - nfa.getValue();
-
-    if (fusion_score > 0) {
-        /* try to reduce width */
-        rect reduce_rec;
-        float delta = 0.5;
-        NFA_params nfa_optimized(nfa);
-        rect_copy(&rec, &reduce_rec);
-        for (int n = 0; n < 5; n++)
-        {
-            if ((reduce_rec.width - delta) >= 0.5)
-            {
-                reduce_rec.width -= delta;
-                nfa_optimized.computeNFA(reduce_rec, angles, logNT);
-                if (nfa_optimized.getValue() > nfa.getValue()){
-                    rect_copy(&reduce_rec, &rec);
-                    fusion_score = diff_binom - nfa_optimized.getValue();
-                    if (fusion_score < 0){ break; }
-                }
-            }
-        }
-        if (fusion_score > 0)
-            return false;
-
-        // recompute cluster data
-        rect_iter * rec_it;
-        data.clear();
-        for(rec_it=ri_ini(&rec); !ri_end(rec_it); ri_inc(rec_it)) {
-            if(rec_it->x >= 0 && rec_it->y >= 0 &&
-               rec_it->x<(int)angles->xsize && rec_it->y<(int)angles->ysize) {
-                if (isaligned(rec_it->x,rec_it->y, angles,rec.theta,rec.prec)) {
-                    point p = {rec_it->x, rec_it->y};
-                    data.push_back(p);
-                }
-            }
-        }
-        ri_del(rec_it);
-    }
-    nfa.computeNFA(rec, angles, logNT);
-    return true;
-}
-
-double Cluster::length() const {
-    float dx = rec.x1 - rec.x2;
-    float dy = rec.y1 - rec.y2;
-    return sqrt(dx*dx + dy*dy);
-}
-
-Segment Cluster::toSegment() const {
-    return Segment(rec.x1 + 0.5, rec.y1 + 0.5, rec.x2 + 0.5, rec.y2 + 0.5,
-                   rec.width, rec.p, nfa.getValue(), scale);
-}
-
-bool Cluster::isMerged() const {
-    return merged;
-}
-
-void Cluster::setMerged() {
-    merged = true;
-}
-
-double Cluster::getNFA() const {
-    return nfa.getValue();
-}
-
-int Cluster::getIndex() const {
-    return index;
-}
-
-int Cluster::getScale() const {
-    return scale;
-}
-
-double Cluster::getTheta() const {
-    return nfa.getTheta();
-}
-
-double Cluster::getPrec() const {
-    return nfa.getPrec();
-}
-
-Point2d Cluster::getCenter() const {
-    return Point2d(rec.x, rec.y);
-}
-
-Point2d Cluster::getSlope() const {
-    double c_dx, c_dy;
-    c_dx = rec.x2-rec.x1;
-    c_dy = rec.y2-rec.y1;
-
-    if(fabs(c_dx) > fabs(c_dy))
-        return Point2d(1, c_dy/c_dx);
-    return Point2d(c_dx/c_dy, 1);
-}
-
-const vector<point>& Cluster::getData() const {
-    return data;
-}
-
-void Cluster::setUsed(image_char used) const {
-    for(size_t j=0; j<data.size(); j++)
-        used->data[data[j].x + data[j].y * used->xsize] = USED;
-}
-
-void Cluster::setIndex(int i) {
-    index = i;
+Point2d getSlope(const Cluster& c) {
+    const rect& r = c.rectangle();
+    double dx=r.x2-r.x1, dy=r.y2-r.y1;
+    return (fabs(dx)>fabs(dy))? Point2d(1, dy/dx): Point2d(dx/dy, 1);
 }
 
 // --- ROI class ---
@@ -249,23 +198,19 @@ class ROI {
     static const int CLUSTER_NULL = -1;
 
     int scale;
-
     // angles info pointers
     image_double angles, modgrad;
     double logNT;
 
     // rectangle parameters
     int width; 
-    int xMin, xMax, yMin, yMax; // Axis-aligned bounding box
-    Point2d p_up, p_down, q_up, q_down;
+    int xMin, xMax, yMin, yMax; ///< Axis-aligned bounding box
+    Point2d p_up, p_down, q_up, q_down; ///< Corners of rectangle
 
     // aligned pixels
     double theta, prec;
-    vector<point> alignedPixels;
     vector<int> definedPixels;
-    vector<int> pixelCluster;
-
-    // clusters of pixels
+    vector<int> pixelCluster; /// Maps pixel to cluster index
     vector<Cluster> clusters;
 
     // conversion from 2D point to 1D index
@@ -284,29 +229,60 @@ class ROI {
     }
 
     void computeRectangle(const Segment& rawSegment);
-    void computeAlignedPixels();
+    void findAlignedPixels(vector<point>& alignedPixels);
+    void agregatePixels(const vector<point>& alignedPixels);
 
 public:
-    ROI(const Segment &rawSegment, image_double a, image_double m,
-        double lNT, int s);
-    ROI(image_double a, image_double m, double lNT,
-        const vector<Cluster>& c, int s);
+    ROI(const Segment& seg,
+        image_double a, image_double m, double lNT, int s);
+    ROI(const vector<Cluster>& c,
+        image_double a, image_double m, double lNT, int s);
 
-    bool isVoid() const { return alignedPixels.size() <= 1; }
-    void agregatePixels();
+    bool isVoid() const { return clusters.empty(); }
     void mergeClusters(bool post_lsd);
-    bool keepCorrectLines(vector<Cluster> &refinedLines, image_char used,
-                          double log_eps, bool post_lsd);
+    bool filterClusters(vector<Cluster>& filtered, image_char& used,
+                        double log_eps, bool post_lsd);
 };
 
-void ROI::computeRectangle(const Segment& rawSegment) {
-    Point2d P(rawSegment.x1,rawSegment.y1), Q(rawSegment.x2,rawSegment.y2);
+/// First constructor: a single segment (from previous scale).
+ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
+         double lNT, int s)
+: scale(s), angles(a), modgrad(m), logNT(lNT) {
+    // gradient parameters
+    theta = rawSegment.angle;
+    prec = M_PI*rawSegment.prec;
+
+    computeRectangle(rawSegment);
+    vector<point> alignedPixels;
+    findAlignedPixels(alignedPixels);
+    agregatePixels(alignedPixels);
+}
+
+/// Second constructor: the ROI is the full image, clusters already computed.
+ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
+         double lNT, int s)
+: scale(s), angles(a), modgrad(m), logNT(lNT) {
+    width = (int)a->xsize;
+    xMin = yMin = 0;
+    xMax = a->xsize-1;
+    yMax = a->ysize-1;
+    clusters = c;
+    pixelCluster = vector<int>(sizeBB(), NOTDEF);
+    for(size_t i=0; i<clusters.size(); i++)
+        for(size_t j=0; j<clusters[i].getPixels().size(); j++) {
+            int idx = pixelToIndex( clusters[i].getPixels()[j] );
+            pixelCluster[idx] = clusters[i].getIndex();
+        }
+}
+
+void ROI::computeRectangle(const Segment& seg) {
+    Point2d P(seg.x1,seg.y1), Q(seg.x2,seg.y2);
 
     // compute rectangle extremities
-    double length = rawSegment.length;
+    double length = seg.length;
     double dx = Q.x - P.x;
     double dy = Q.y - P.y;
-    double dW = (rawSegment.width / 2 + 1) / length;
+    double dW = (seg.width/2+1)/length;
 
     p_up   = Point2d(P.x + dW*dy - dx / length, P.y - dW*dx - dy / length);
     p_down = Point2d(P.x - dW*dy - dx / length, P.y + dW*dx - dy / length);
@@ -323,10 +299,10 @@ void ROI::computeRectangle(const Segment& rawSegment) {
     width = xMax-xMin+1;
 }
 
-void ROI::computeAlignedPixels() {
+void ROI::findAlignedPixels(vector<point>& alignedPixels) {
     pixelCluster = vector<int>(sizeBB(), NOTDEF);
-    for(point p = {xMin,yMin}; p.y<=yMax; p.y++) {
-        for(p.x=xMin; p.x<=xMax; p.x++) {
+    for(point p = {xMin,yMin}; p.y<=yMax; p.y++)
+        for(p.x=xMin; p.x<=xMax; p.x++)
             if(insideRect(p_up, p_down, q_up, q_down, p)) {
                 int i = p.x + p.y*angles->xsize;
                 if(angles->data[i] != NOTDEF) {
@@ -337,56 +313,12 @@ void ROI::computeAlignedPixels() {
                     }
                 }
             }
-        }
-    }
 }
 
-ROI::ROI(const Segment &rawSegment, image_double a, image_double m,
-         double lNT, int s) {
-    // images parameters
-    angles = a;
-    modgrad = m;
-    logNT = lNT;
-
-    // gradient parameters
-    theta = rawSegment.angle;
-    prec = M_PI*rawSegment.prec;
-
-    scale = s;
-
-    computeRectangle(rawSegment);
-    computeAlignedPixels();
-}
-
-ROI::ROI(image_double a, image_double m, double lNT,
-         const vector<Cluster>& c, int s) {
-    // images parameters
-    angles = a;
-    modgrad = m;
-    logNT = lNT;
-
-    scale = s;
-
-    width = (int)a->xsize;
-    xMin = yMin = 0;
-    xMax = a->xsize-1;
-    yMax = a->ysize-1;
-    pixelCluster = vector<int>(sizeBB(), NOTDEF);
-    clusters = c;
-    for(size_t i=0; i<clusters.size(); i++) {
-        for(size_t j=0; j<clusters[i].getData().size(); j++) {
-            int idx = pixelToIndex( clusters[i].getData()[j] );
-            pixelCluster[idx] = clusters[i].getIndex();
-        }
-    }
-}
-
-void ROI::agregatePixels() {
+void ROI::agregatePixels(const vector<point>& alignedPixels) {
     for(size_t i=0; i<alignedPixels.size(); i++) {
         int index = pixelToIndex(alignedPixels[i]);
-
-        // if pixel already clusterized or has no angle defined go on
-        if (pixelCluster[index] != CLUSTER_NULL){ continue; }
+        if(pixelCluster[index] != CLUSTER_NULL) continue;
 
         // initialize new cluster
         vector<point> data(1, alignedPixels[i]);
@@ -401,25 +333,20 @@ void ROI::agregatePixels() {
                     if(dx==0 && dy==0) continue;
                     point p = {seed.x + dx, seed.y + dy};
                     int idx = pixelToIndex(p);
-
-                    // add neighbor that have correct gradient directions and is not already in the cluster
-                    if (!inBB(p) || pixelCluster[idx]!=CLUSTER_NULL)
-                        continue;
-
-                    pixelCluster[idx] = clusters.size();
-                    data.push_back(p);
+                    if(inBB(p) && pixelCluster[idx]==CLUSTER_NULL) {
+                        pixelCluster[idx] = clusters.size();
+                        data.push_back(p);
+                    }
                 }
             }
         }
         // suppress clusters with too few pixels
-        if (data.size() <= 10){
+        if(data.size() < MIN_SIZE_CLUSTER)
             for(size_t j=0; j<data.size(); j++)
                 pixelCluster[pixelToIndex(data[j])] = NOTDEF;
-            continue;
-        }
-
-        Cluster c(angles, modgrad, logNT, data, theta, prec, clusters.size(), scale, -1);
-        clusters.push_back(c);
+        else
+            clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
+                                       prec, clusters.size(), scale, -1));
     }
 }
 
@@ -437,8 +364,8 @@ void ROI::mergeClusters(bool post_lsd) {
 
         if( c.isMerged() ) continue;
         // define line of intersection
-        const Point2d center = c.getCenter();
-        const Point2d step = c.getSlope();
+        const Point2d center = getCenter(c);
+        const Point2d step = getSlope(c);
         const double theta = c.getTheta();
         const double prec = c.getPrec();
 
@@ -455,7 +382,7 @@ void ROI::mergeClusters(bool post_lsd) {
                 if(! inBB(X,Y)) break;
 
                 int idx = pixelCluster[pixelToIndex(X,Y)];
-                if (idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()){
+                if(idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()) {
                     if(post_lsd &&
                        angle_diff(clusters[idx].getTheta(),theta) > prec)
                         continue;
@@ -498,47 +425,50 @@ void ROI::mergeClusters(bool post_lsd) {
         clusters.push_back(megaCluster);
 
         // labelize clustered points with their new label
-        for (size_t j=0; j<megaCluster.getData().size(); j++) {
-            const point& p = megaCluster.getData()[j];
+        for (size_t j=0; j<megaCluster.getPixels().size(); j++) {
+            const point& p = megaCluster.getPixels()[j];
             if(inBB(p)) // due to width reduction, there can be some issue
                 pixelCluster[pixelToIndex(p)] = megaCluster.getIndex();
         }
     }
 }
 
-bool ROI::keepCorrectLines(vector<Cluster> &refinedLines, image_char used,
-                           double log_eps, bool post_lsd) {
-    const size_t nRefinedLines = refinedLines.size();
+/// Append valid clusters of the ROI to \a filtered.
+/// A valid cluster has not been merged and has a sufficiently large -log(NFA).
+/// If no cluster is valid in the ROI, discard all pixels aligned with the ROI,
+/// so that the next LSD pass will not detect anything there.
+bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
+                         double log_eps, bool post_lsd) {
+    bool adding=false;
     for (size_t i=0; i<clusters.size(); i++) {
         // cluster has been merged and has no more meaning
-        if (clusters[i].isMerged()) continue;
+        if(clusters[i].isMerged()) continue;
         // NFA is too low
         if (clusters[i].getNFA() <= log_eps) continue;
 
+        adding = true;
         clusters[i].setUsed(used);
-        clusters[i].setIndex(refinedLines.size());
-        refinedLines.push_back(clusters[i]);
+        clusters[i].setIndex(filtered.size());
+        filtered.push_back(clusters[i]);
     }
 
-    // if no lines kept return false and set pixels to used to avoid useless computation
-    if (!post_lsd && nRefinedLines == refinedLines.size()) {
-        for (size_t j=0; j<definedPixels.size(); j++)
+    // if no valid cluster, set pixels to used to avoid useless computation
+    if(!post_lsd && !adding)
+        for(size_t j=0; j<definedPixels.size(); j++)
             used->data[definedPixels[j]] = USED;
-        return false;
-    }
-    return true;
+    return adding;
 }
 
 // --- Free functions ---
 
-vector<Cluster> refineRawSegments(const vector<Segment> &rawSegments,
-                                  vector<Segment> &finalLines, int i_scale,
+vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
+                                  vector<Segment>& finalLines, int i_scale,
                                   image_double angles, image_double modgrad,
-                                  image_char used,
+                                  image_char& used,
                                   double logNT, double log_eps) {
-    vector<Cluster> refinedLines;
-    for (size_t i_line=0; i_line<rawSegments.size(); i_line++){
-        const Segment& seg = rawSegments[i_line];
+    vector<Cluster> clusters;
+    for (size_t i=0; i<rawSegments.size(); i++){
+        const Segment& seg = rawSegments[i];
         if(seg.scale != i_scale - 1) {
             finalLines.push_back(seg);
             continue;
@@ -552,42 +482,40 @@ vector<Cluster> refineRawSegments(const vector<Segment> &rawSegments,
             continue;
         }
 
-        // 1. compute clusters
-        roi.agregatePixels();
-        // 2. merge greedily aligned clusters that should be (in NFA meaning)
+        // 1. merge greedily aligned clusters that should be (in NFA meaning)
         roi.mergeClusters(false);
-        // 3. compute associated lines
-        if(! roi.keepCorrectLines(refinedLines, used, log_eps, false))
+        // 2. compute associated lines
+        if(! roi.filterClusters(clusters, used, log_eps, false))
             // no lines have been found ==> keep the former one
             finalLines.push_back(seg);
     }
-    return refinedLines;
+    return clusters;
 }
 
-void mergeSegments(vector<Cluster> &refinedLines,
+void mergeSegments(vector<Cluster>& clusters,
                    double segment_length_threshold, int i_scale,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps) {
     // filter refinedLines wrt segment line
     if(segment_length_threshold>0) {
         vector<Cluster> temp;
-        for (size_t i=0; i<refinedLines.size(); i++) {
-            if(refinedLines[i].length() > segment_length_threshold) {
-                refinedLines[i].setIndex(temp.size());
-                temp.push_back(refinedLines[i]);
+        for (size_t i=0; i<clusters.size(); i++) {
+            if(clusters[i].length() > segment_length_threshold) {
+                clusters[i].setIndex(temp.size());
+                temp.push_back(clusters[i]);
             }
         }
-        refinedLines = temp;
+        clusters = temp;
     }
     // merge greedily aligned clusters that should be merged (in NFA meaning)
-    ROI clusters(angles, modgrad, logNT, refinedLines, i_scale);
-    clusters.mergeClusters(true);
-    refinedLines.clear();
-    clusters.keepCorrectLines(refinedLines, used, log_eps, true);
+    ROI roi(clusters, angles, modgrad, logNT, i_scale);
+    roi.mergeClusters(true);
+    clusters.clear();
+    roi.filterClusters(clusters, used, log_eps, true);
 }
 
 void denseGradientFilter(vector<int>& noisyTexture, int w, int h, 
-                         const image_double& angles, const image_char& used,
+                         const image_double& angles, image_char& used,
                          int xsize, int ysize, int N){
     if(noisyTexture.size() == 0){
         noisyTexture = vector<int>(N, 0);
