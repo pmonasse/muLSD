@@ -217,6 +217,8 @@ class ROI {
     void findAlignedPixels(vector<point>& alignedPixels);
     void agregatePixels(const vector<point>& alignedPixels);
 
+    void findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const;
+
 public:
     ROI(const Segment& seg,
         image_double a, image_double m, double lNT, int s);
@@ -224,9 +226,9 @@ public:
         image_double a, image_double m, double lNT, int s);
 
     bool isVoid() const { return clusters.empty(); }
-    void mergeClusters(bool post_lsd);
+    void mergeClusters(bool postLSD);
     bool filterClusters(vector<Cluster>& filtered, image_char& used,
-                        double log_eps, bool post_lsd);
+                        double log_eps, bool postLSD);
 };
 
 const int ROI::CLUSTER_NULL=-1;
@@ -306,6 +308,8 @@ void ROI::findAlignedPixels(vector<point>& alignedPixels) {
             }
 }
 
+/// Find 8-connected components of alignedPixels, i.e., the initial clusters.
+/// The ones less than \c MIN_SIZE_CLUSTER are just ignored.
 void ROI::agregatePixels(const vector<point>& alignedPixels) {
     for(size_t i=0; i<alignedPixels.size(); i++) {
         int index = pixelToIndex(alignedPixels[i]);
@@ -313,7 +317,7 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
 
         // initialize new cluster
         vector<point> data(1, alignedPixels[i]);
-        pixelCluster[index] = clusters.size();
+        const int idCluster = pixelCluster[index] = clusters.size();
 
         // growing region from the current pixel
         for(size_t currIndex=0; currIndex<data.size(); ++currIndex) {
@@ -325,7 +329,7 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
                     point p = {seed.x + dx, seed.y + dy};
                     int idx = pixelToIndex(p);
                     if(inBB(p) && pixelCluster[idx]==CLUSTER_NULL) {
-                        pixelCluster[idx] = clusters.size();
+                        pixelCluster[idx] = idCluster;
                         data.push_back(p);
                     }
                 }
@@ -337,65 +341,65 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
                 pixelCluster[pixelToIndex(data[j])] = CLUSTER_NULL;
         else
             clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
-                                       prec, clusters.size(), scale, -1));
+                                       prec, idCluster, scale, -1));
     }
 }
 
-void ROI::mergeClusters(bool post_lsd) {
+void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
+    const Point2d center = getCenter(c);
+    const Point2d step = getSlope(c);
+    const double theta = c.getTheta();
+    const double prec = c.getPrec();
+
+    // find clusters intersecting with current cluster direction
+    for (int s = -1; s <= 1; s += 2){
+        const Point2d signed_step = s*step;
+        const int cidx = c.getIndex();
+        Point2d p = center;
+        while(true) {
+            p += signed_step;
+            int X = floor(p.x + 0.5);
+            int Y = floor(p.y + 0.5);
+            if(! inBB(X,Y)) break;
+
+            int idx = pixelCluster[pixelToIndex(X,Y)];
+            if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()){
+                if(postLSD && angle_diff(clusters[idx].getTheta(),theta)>prec)
+                    continue;
+                inter.insert(idx);
+                // Post lsd processing: only look for next neighbor?
+                if(postLSD) break;
+            }
+        }
+    }
+}
+
+void ROI::mergeClusters(bool postLSD) {
     // sort clusters by decreasing NFA
     vector<int> clusterStack(clusters.size());
     std::iota(clusterStack.begin(), clusterStack.end(), 0);
     std::sort(clusterStack.begin(), clusterStack.end(),
               CompareClusters(clusters));
 
-    // merge clusters if necessary
     for (size_t i=0; i<clusterStack.size(); i++) {
         int currIndex = clusterStack[i];
         Cluster& c = clusters[currIndex];
-
         if( c.isMerged() ) continue;
-        // define line of intersection
-        const Point2d center = getCenter(c);
-        const Point2d step = getSlope(c);
-        const double theta = c.getTheta();
-        const double prec = c.getPrec();
 
-        // find clusters intersecting with current cluster direction
         set<int> intersect;
-        for (int s = -1; s <= 1; s += 2){
-            const Point2d signed_step = s*step;
-            const int cidx = c.getIndex();
-            Point2d p = center;
-            while (true){
-                p += signed_step;
-                int X = floor(p.x + 0.5);
-                int Y = floor(p.y + 0.5);
-                if(! inBB(X,Y)) break;
-
-                int idx = pixelCluster[pixelToIndex(X,Y)];
-                if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()){
-                    if(post_lsd &&
-                       angle_diff(clusters[idx].getTheta(),theta) > prec)
-                        continue;
-
-                    intersect.insert(idx);
-                    // Post lsd processing: only look for next neighbor?
-                    if(post_lsd) break;
-                }
-            }
-        }
+        findIntersect(c, intersect, postLSD);
         if( intersect.empty() ) continue;
 
         // compute merged cluster
         Cluster megaCluster;
 
         set<int>::const_iterator it=intersect.begin(), end=intersect.end();
-        if(!post_lsd) {
+        if(!postLSD) {
             megaCluster = c.mergedCluster(clusters, intersect, angles, modgrad, logNT);
             if (! megaCluster.isToMerge(angles, logNT)) continue;
             // labelize merged clusters as merged
             for (; it!=end; it++)
-                clusters[(*it)].setMerged();
+                clusters[*it].setMerged();
         } else {
             bool toMerge = false;
             for(; it!=end && !toMerge; it++) {
@@ -405,7 +409,7 @@ void ROI::mergeClusters(bool post_lsd) {
                 toMerge = megaCluster.isToMerge(angles, logNT);
                 // labelize merged clusters as merged
                 if(toMerge)
-                    clusters[(*it)].setMerged();
+                    clusters[*it].setMerged();
             }
             if(! toMerge) continue;
         }
@@ -428,7 +432,7 @@ void ROI::mergeClusters(bool post_lsd) {
 /// If no cluster is valid in the ROI, discard all pixels aligned with the ROI,
 /// so that the next LSD pass will not detect anything there.
 bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
-                         double log_eps, bool post_lsd) {
+                         double log_eps, bool postLSD) {
     bool adding=false;
     for (size_t i=0; i<clusters.size(); i++) {
         // cluster has been merged and has no more meaning
@@ -443,7 +447,7 @@ bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
     }
 
     // if no valid cluster, set pixels to used to avoid useless computation
-    if(!post_lsd && !adding)
+    if(!postLSD && !adding)
         for(size_t j=0; j<definedPixels.size(); j++)
             used->data[definedPixels[j]] = USED;
     return adding;
