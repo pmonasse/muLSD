@@ -31,29 +31,13 @@ extern "C" {
 }
 #include <set>
 #include <vector>
-#include <cmath>
-
-class NFA_params {
-    double value, theta, prec;
-    bool computed;
-public:
-    NFA_params(): computed(false) {}
-    NFA_params(double t, double p);
-
-    void computeNFA(rect& rec, image_double angles, double logNT);
-
-    double getValue() const;
-    double getTheta() const { return theta; }
-    double getPrec() const { return prec; }
-};
 
 class Cluster {
     std::vector<point> pixels;
     rect rec;
 
     // NFA parameters
-    NFA_params nfa;
-    double nfa_separated_clusters;
+    double theta, prec, nfa, nfa_separated_clusters;
 
     // fusion parameters
     int index;
@@ -80,15 +64,14 @@ public:
 
     const std::vector<point>& getPixels() const { return pixels; }
     const rect& rectangle() const { return rec; }
-    double getNFA() const { return nfa.getValue(); }
+    double getTheta() const { return theta; }
+    double getPrec() const { return prec; }
+    double getNFA() const { return nfa; }
     int getIndex() const { return index; }
     void setIndex(int i) { index=i; }
     int getScale() const { return scale; }
     bool isMerged() const { return merged; }
     void setMerged() { merged=true; }
-
-    double getTheta() const { return nfa.getTheta(); }
-    double getPrec() const { return nfa.getPrec(); }
 };
 
 /// Compute the segments at current scale with information from previous scale
@@ -110,5 +93,4 @@ void denseGradientFilter(std::vector<int>& noisyTexture, int w, int h,
                          image_double angles, image_char& used,
                          int xsize, int ysize, int N);
 
-#endif /* !MULTISCALE_LSD_HEADER */
-/*----------------------------------------------------------------------------*/
+#endif

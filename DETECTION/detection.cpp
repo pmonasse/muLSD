@@ -29,6 +29,7 @@
   ----------------------------------------------------------------------------*/
 
 #include "detection.hpp"
+#include <cmath>
 using namespace std;
 
 vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyTexture, const vector<Segment> &rawSegments,

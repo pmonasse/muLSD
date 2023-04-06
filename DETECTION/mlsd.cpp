@@ -25,25 +25,11 @@
 #include "mlsd.hpp"
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 using namespace std;
 
 /// Minimum number of pixels for a valid cluster
 static const int MIN_SIZE_CLUSTER=10;
-
-// --- NFA_params class ---
-
-NFA_params::NFA_params(double t, double p)
-: theta(t), prec(p), computed(false) {}
-
-void NFA_params::computeNFA(rect& rec, image_double angles, double logNT) {
-    value = rect_nfa(&rec, angles, logNT);
-    computed = true;
-}
-
-double NFA_params::getValue() const {
-    if(! computed) std::cerr << "ERROR in NFA computation" << std::endl;
-    return value;
-}
 
 // --- Cluster class ---
 
@@ -52,18 +38,18 @@ double NFA_params::getValue() const {
 Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
                  const vector<point>& d, double t, double p,
                  int idx, int s, double nfaSeparate)
-: pixels(d), nfa(t,p), nfa_separated_clusters(nfaSeparate),
+: pixels(d), theta(t), prec(p), nfa_separated_clusters(nfaSeparate),
   index(idx), scale(s), merged(false) {
     region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
-    nfa.computeNFA(rec, angles, logNT);
+    nfa = rect_nfa(&rec, angles, logNT);
 }
 
 /// The rectangle containing the list of pixels is already known (after LSD).
 Cluster::Cluster(image_double angles, double logNT,
                  const point* d, int dsize, rect& r, int idx, int s)
-: pixels(d,d+dsize), rec(r), nfa(r.theta,r.prec), nfa_separated_clusters(-1),
+: pixels(d,d+dsize), rec(r), theta(r.theta), prec(r.prec), nfa_separated_clusters(-1),
   index(idx), scale(s), merged(false) {
-    nfa.computeNFA(rec, angles, logNT);
+    nfa = rect_nfa(&rec, angles, logNT);
 }
 
 double Cluster::length() const {
@@ -72,7 +58,7 @@ double Cluster::length() const {
 
 Segment Cluster::toSegment() const {
     return Segment(rec.x1 + 0.5, rec.y1 + 0.5, rec.x2 + 0.5, rec.y2 + 0.5,
-                   rec.width, rec.p, nfa.getValue(), scale);
+                   rec.width, rec.p, nfa, scale);
 }
 
 void Cluster::setUsed(image_char& used) const {
@@ -86,15 +72,14 @@ Cluster Cluster::mergedCluster(const vector<Cluster>& clusters,
                                double logNT) const {
     // merge pixel sets
     vector<point> mergedPixels = pixels;
-    double nfaSeparated = nfa.getValue() - log10(rec.n+1);
+    double nfaSeparated = nfa - log10(rec.n+1);
     for(set<int>::iterator it=indexMerge.begin(); it!=indexMerge.end(); it++) {
         const Cluster& c = clusters[*it];
         mergedPixels.insert(mergedPixels.end(),c.pixels.begin(),c.pixels.end());
-        nfaSeparated += c.nfa.getValue()-log10(clusters[*it].rec.n + 1);
+        nfaSeparated += c.nfa-log10(clusters[*it].rec.n + 1);
     }
-    return Cluster(angles, modgrad, logNT, mergedPixels, nfa.getTheta(),
-                   nfa.getPrec(), clusters.size(), scale,
-                   nfaSeparated);
+    return Cluster(angles, modgrad, logNT, mergedPixels, theta, prec,
+                   clusters.size(), scale, nfaSeparated);
 }
 
 /// Check with log(nfa) if the current cluster is better merged.
@@ -102,20 +87,20 @@ bool Cluster::isToMerge(image_double angles, double logNT) {
     int N = rec.width;
     int M = length();
     double diff_binom = -(5/2.0 * log10(double(N*M)) - log10(2.0)) + nfa_separated_clusters + log10(double(rec.n + 1));
-    double fusion_score = diff_binom - nfa.getValue();
+    double fusion_score = diff_binom - nfa;
 
     if (fusion_score > 0) {
         /* try to reduce width */
         const double delta = 0.5;
-        NFA_params nfa_optimized(nfa);
+        double nfa_optimized = nfa;
         rect reduce_rec = rec;
         for(int n=0; n<5; n++) {
             if(reduce_rec.width-delta>=0.5) {
                 reduce_rec.width -= delta;
-                nfa_optimized.computeNFA(reduce_rec, angles, logNT);
-                if (nfa_optimized.getValue() > nfa.getValue()){
+                nfa_optimized = rect_nfa(&reduce_rec, angles, logNT);
+                if(nfa_optimized > nfa) {
                     rec = reduce_rec;
-                    fusion_score = diff_binom - nfa_optimized.getValue();
+                    fusion_score = diff_binom - nfa_optimized;
                     if(fusion_score<0) break;
                 }
             }
@@ -134,7 +119,7 @@ bool Cluster::isToMerge(image_double angles, double logNT) {
             }
         ri_del(rec_it);
     }
-    nfa.computeNFA(rec, angles, logNT);
+    nfa = rect_nfa(&rec, angles, logNT);
     return true;
 }
 
@@ -195,7 +180,7 @@ public:
 
 /// Region of interest: a rectangle inside the image.
 class ROI {
-    static const int CLUSTER_NULL = -1;
+    static const int CLUSTER_NULL;
 
     int scale;
     // angles info pointers
@@ -244,6 +229,8 @@ public:
                         double log_eps, bool post_lsd);
 };
 
+const int ROI::CLUSTER_NULL=-1;
+
 /// First constructor: a single segment (from previous scale).
 ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
          double lNT, int s)
@@ -253,6 +240,7 @@ ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
     prec = M_PI*rawSegment.prec;
 
     computeRectangle(rawSegment);
+    pixelCluster = vector<int>(sizeBB(), CLUSTER_NULL);
     vector<point> alignedPixels;
     findAlignedPixels(alignedPixels);
     agregatePixels(alignedPixels);
@@ -267,7 +255,7 @@ ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
     xMax = a->xsize-1;
     yMax = a->ysize-1;
     clusters = c;
-    pixelCluster = vector<int>(sizeBB(), NOTDEF);
+    pixelCluster = vector<int>(sizeBB(), CLUSTER_NULL);
     for(size_t i=0; i<clusters.size(); i++)
         for(size_t j=0; j<clusters[i].getPixels().size(); j++) {
             int idx = pixelToIndex( clusters[i].getPixels()[j] );
@@ -275,6 +263,7 @@ ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
         }
 }
 
+/// Compute rectangle and bounding box for segment \a seg.
 void ROI::computeRectangle(const Segment& seg) {
     Point2d P(seg.x1,seg.y1), Q(seg.x2,seg.y2);
 
@@ -299,8 +288,10 @@ void ROI::computeRectangle(const Segment& seg) {
     width = xMax-xMin+1;
 }
 
+/// Insert in \a alignedPixels the pixels inside \c rect whose gradient
+/// direction is aligned. Pixels inside the rectangle with non-null gradient
+/// are registered in \c definedPixels. 
 void ROI::findAlignedPixels(vector<point>& alignedPixels) {
-    pixelCluster = vector<int>(sizeBB(), NOTDEF);
     for(point p = {xMin,yMin}; p.y<=yMax; p.y++)
         for(p.x=xMin; p.x<=xMax; p.x++)
             if(insideRect(p_up, p_down, q_up, q_down, p)) {
@@ -343,7 +334,7 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
         // suppress clusters with too few pixels
         if(data.size() < MIN_SIZE_CLUSTER)
             for(size_t j=0; j<data.size(); j++)
-                pixelCluster[pixelToIndex(data[j])] = NOTDEF;
+                pixelCluster[pixelToIndex(data[j])] = CLUSTER_NULL;
         else
             clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
                                        prec, clusters.size(), scale, -1));
@@ -382,7 +373,7 @@ void ROI::mergeClusters(bool post_lsd) {
                 if(! inBB(X,Y)) break;
 
                 int idx = pixelCluster[pixelToIndex(X,Y)];
-                if(idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()) {
+                if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()){
                     if(post_lsd &&
                        angle_diff(clusters[idx].getTheta(),theta) > prec)
                         continue;
@@ -393,7 +384,6 @@ void ROI::mergeClusters(bool post_lsd) {
                 }
             }
         }
-        // if no cluster intersections
         if( intersect.empty() ) continue;
 
         // compute merged cluster
