@@ -101,7 +101,7 @@ Cluster Cluster::mergedCluster(const vector<Cluster>& clusters,
 bool Cluster::isToMerge(image_double angles, double logNT) {
     int N = rec.width;
     int M = length();
-    double diff_binom = -(5 / 2 * log10(double(N*M)) - log10(2.0)) + nfa_separated_clusters + log10(double(rec.n + 1));
+    double diff_binom = -(5/2.0 * log10(double(N*M)) - log10(2.0)) + nfa_separated_clusters + log10(double(rec.n + 1));
     double fusion_score = diff_binom - nfa.getValue();
 
     if (fusion_score > 0) {
