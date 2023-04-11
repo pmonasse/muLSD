@@ -369,7 +369,7 @@ void ROI::mergeClusters(bool postLSD) {
             for(it=intersect.begin(); it!=end && toMerge; ++it)
                 if(megaCluster.getNFA()<=clusters[*it].getNFA())
                     toMerge = false;
-                
+
             if(!toMerge) continue;
             // labelize merged clusters as merged
             for(it=intersect.begin(); it!=end; ++it)
