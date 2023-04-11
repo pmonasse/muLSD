@@ -32,10 +32,14 @@
 #include <cmath>
 using namespace std;
 
-vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyTexture, const vector<Segment> &rawSegments,
-                                     const double quant, const double ang_th, const double log_eps,
-                                     const double density_th, const int n_bins,
-                                     const bool multiscale, const int i_scale, const float segment_length_threshold)
+vector<Segment> LineSegmentDetection(const Image<float>& im,
+                                     vector<int>& noisyTexture,
+                                     const vector<Segment>& rawSegments,
+                                     double quant, double ang_th,
+                                     double log_eps,
+                                     double density_th, int n_bins,
+                                     bool multiscale, int i_scale,
+                                     float minLength)
 {
     vector<Segment> returned_lines;
 
@@ -136,7 +140,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
         }
 
     if(multiscale)
-        mergeSegments(clusters, segment_length_threshold, i_scale,
+        mergeClusters(clusters, minLength, i_scale,
                       angles, modgrad, used, logNT, log_eps);
 
     // convert clusters into segments

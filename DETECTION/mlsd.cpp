@@ -461,15 +461,15 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
     return clusters;
 }
 
-void mergeSegments(vector<Cluster>& clusters,
-                   double segment_length_threshold, int i_scale,
+void mergeClusters(vector<Cluster>& clusters,
+                   double minLength, int i_scale,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps) {
     // filter refinedLines wrt segment line
-    if(segment_length_threshold>0) {
+    if(minLength>0) {
         vector<Cluster> temp;
         for (size_t i=0; i<clusters.size(); i++) {
-            if(clusters[i].length() > segment_length_threshold) {
+            if(clusters[i].length() >= minLength) {
                 clusters[i].setIndex(temp.size());
                 temp.push_back(clusters[i]);
             }
