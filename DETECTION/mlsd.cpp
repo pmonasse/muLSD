@@ -37,8 +37,8 @@ static const int MIN_SIZE_CLUSTER=10;
 /// the corresponding rectangle.
 Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
                  const vector<point>& d, double t, double p,
-                 int idx, int s, double nfaSeparate)
-: pixels(d), theta(t), prec(p), nfa_separated_clusters(nfaSeparate),
+                 int idx, int s)
+: pixels(d), theta(t), prec(p),
   index(idx), scale(s), merged(false) {
     region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
     nfa = rect_nfa(&rec, angles, logNT);
@@ -47,7 +47,7 @@ Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
 /// The rectangle containing the list of pixels is already known (after LSD).
 Cluster::Cluster(image_double angles, double logNT,
                  const point* d, int dsize, rect& r, int idx, int s)
-: pixels(d,d+dsize), rec(r), theta(r.theta), prec(r.prec), nfa_separated_clusters(-1),
+: pixels(d,d+dsize), rec(r), theta(r.theta), prec(r.prec),
   index(idx), scale(s), merged(false) {
     nfa = rect_nfa(&rec, angles, logNT);
 }
@@ -66,61 +66,20 @@ void Cluster::setUsed(image_char& used) const {
         used->data[pixels[j].x + pixels[j].y*used->xsize] = USED;
 }
 
-Cluster Cluster::mergedCluster(const vector<Cluster>& clusters,
-                               const set<int>& indexMerge,
-                               image_double angles, image_double modgrad,
-                               double logNT) const {
+/// Build the union of the current cluster and the ones with indices in
+/// \a indexMerge.
+Cluster Cluster::united(const vector<Cluster>& clusters,
+                        const set<int>& indexMerge,
+                        image_double angles, image_double modgrad,
+                        double logNT) const {
     // merge pixel sets
     vector<point> mergedPixels = pixels;
-    double nfaSeparated = nfa - log10(rec.n+1);
-    for(set<int>::iterator it=indexMerge.begin(); it!=indexMerge.end(); it++) {
+    for(set<int>::iterator it=indexMerge.begin(); it!=indexMerge.end(); ++it) {
         const Cluster& c = clusters[*it];
         mergedPixels.insert(mergedPixels.end(),c.pixels.begin(),c.pixels.end());
-        nfaSeparated += c.nfa-log10(clusters[*it].rec.n + 1);
     }
-    return Cluster(angles, modgrad, logNT, mergedPixels, theta, prec,
-                   clusters.size(), scale, nfaSeparated);
-}
-
-/// Check with log(nfa) if the current cluster is better merged.
-bool Cluster::isToMerge(image_double angles, double logNT) {
-    int N = rec.width;
-    int M = length();
-    double diff_binom = -(5/2.0 * log10(double(N*M)) - log10(2.0)) + nfa_separated_clusters + log10(double(rec.n + 1));
-    double fusion_score = diff_binom - nfa;
-
-    if (fusion_score > 0) {
-        /* try to reduce width */
-        const double delta = 0.5;
-        double nfa_optimized = nfa;
-        rect reduce_rec = rec;
-        for(int n=0; n<5; n++) {
-            if(reduce_rec.width-delta>=0.5) {
-                reduce_rec.width -= delta;
-                nfa_optimized = rect_nfa(&reduce_rec, angles, logNT);
-                if(nfa_optimized > nfa) {
-                    rec = reduce_rec;
-                    fusion_score = diff_binom - nfa_optimized;
-                    if(fusion_score<0) break;
-                }
-            }
-        }
-        if(fusion_score>0) return false;
-
-        // recompute cluster data
-        pixels.clear();
-        rect_iter* rec_it;
-        for(rec_it=ri_ini(&rec); !ri_end(rec_it); ri_inc(rec_it))
-            if(0<=rec_it->x && rec_it->x<(int)angles->xsize &&
-               0<=rec_it->y && rec_it->y<(int)angles->ysize &&
-               isaligned(rec_it->x,rec_it->y, angles, rec.theta,rec.prec)) {
-                point p = {rec_it->x, rec_it->y};
-                pixels.push_back(p);
-            }
-        ri_del(rec_it);
-    }
-    nfa = rect_nfa(&rec, angles, logNT);
-    return true;
+    return Cluster(angles, modgrad, logNT, mergedPixels, theta, prec, 
+                   clusters.size(), scale);
 }
 
 // --- Point2d class: pixel with double coordinates ---
@@ -330,8 +289,8 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
         const int idCluster = pixelCluster[index] = clusters.size();
 
         // growing region from the current pixel
-        for(size_t currIndex=0; currIndex<data.size(); ++currIndex) {
-            point seed = data[currIndex];
+        for(size_t j=0; j<data.size(); ++j) {
+            point seed = data[j];
             // look inside 8-neighbourhood
             for (int dx=-1; dx<=1; dx++) {
                 for (int dy=-1; dy<=1; dy++) {
@@ -351,7 +310,7 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
                 pixelCluster[pixelToIndex(data[j])] = CLUSTER_NULL;
         else
             clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
-                                       prec, idCluster, scale, -1));
+                                       prec, idCluster, scale));
     }
 }
 
@@ -405,18 +364,24 @@ void ROI::mergeClusters(bool postLSD) {
 
         set<int>::const_iterator it=intersect.begin(), end=intersect.end();
         if(!postLSD) {
-            megaCluster = c.mergedCluster(clusters, intersect, angles, modgrad, logNT);
-            if (! megaCluster.isToMerge(angles, logNT)) continue;
+            megaCluster = c.united(clusters, intersect, angles, modgrad, logNT);
+            bool toMerge = megaCluster.getNFA()>c.getNFA();
+            for(it=intersect.begin(); it!=end && toMerge; ++it)
+                if(megaCluster.getNFA()<=clusters[*it].getNFA())
+                    toMerge = false;
+                
+            if(!toMerge) continue;
             // labelize merged clusters as merged
-            for (; it!=end; it++)
+            for(it=intersect.begin(); it!=end; ++it)
                 clusters[*it].setMerged();
         } else {
             bool toMerge = false;
-            for(; it!=end && !toMerge; it++) {
+            for(; it!=end && !toMerge; ++it) {
                 set<int> temp;
                 temp.insert(*it);
-                megaCluster = c.mergedCluster(clusters, temp, angles, modgrad, logNT);
-                toMerge = megaCluster.isToMerge(angles, logNT);
+                megaCluster = c.united(clusters, temp, angles, modgrad, logNT);
+                toMerge = megaCluster.getNFA() > max(c.getNFA(),
+                                                     clusters[*it].getNFA());
                 // labelize merged clusters as merged
                 if(toMerge)
                     clusters[*it].setMerged();

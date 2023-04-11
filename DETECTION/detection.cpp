@@ -86,7 +86,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
     min_reg_size = (int)(-logNT / log10(p)); /* minimal number of points in region that can give a meaningful event */
 
     used = new_image_char_ini(xsize, ysize, NOTUSED);
-    reg = (struct point *) calloc((size_t)(xsize*ysize), sizeof(struct point));
+    reg = (point*) calloc((size_t)(xsize*ysize), sizeof(point));
 
     /* search for line segments with previous scale information */
     vector<Cluster> clusters = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
@@ -128,9 +128,8 @@ vector<Segment> LineSegmentDetection(const Image<float>& im, vector<int> &noisyT
 
             /* compute NFA value */
             log_nfa = rect_improve(&rec, angles, logNT, log_eps);
-            if (log_nfa <= log_eps){
+            if(log_nfa <= log_eps)
                 continue;
-            }
 
             clusters.push_back(Cluster(angles, logNT, reg, reg_size, rec,
                                        clusters.size(), i_scale));

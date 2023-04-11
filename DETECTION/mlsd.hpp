@@ -37,7 +37,7 @@ class Cluster {
     rect rec;
 
     // NFA parameters
-    double theta, prec, nfa, nfa_separated_clusters;
+    double theta, prec, nfa;
 
     // fusion parameters
     int index;
@@ -47,16 +47,14 @@ class Cluster {
 public:
     Cluster() {}
     Cluster(image_double angles, image_double modgrad, double logNT,
-            const std::vector<point>& d, double t, double p, int i, int s,
-            double nfaSeparate);
+            const std::vector<point>& d, double t, double p, int i, int s);
     Cluster(image_double angles, double logNT,
             const point* d, const int dsize, rect &r, int i, int s);
 
-    Cluster mergedCluster(const std::vector<Cluster>& clusters,
-                          const std::set<int>& indexToMerge,
-                          image_double angles, image_double modgrad,
-                          double logNT) const;
-    bool isToMerge(image_double angles, double logNT);
+    Cluster united(const std::vector<Cluster>& clusters,
+                   const std::set<int>& indexToMerge,
+                   image_double angles, image_double modgrad,
+                   double logNT) const;
 
     double length() const;
     Segment toSegment() const;
