@@ -137,9 +137,24 @@ inline void operator+=(Point2d& p, const Point2d& q) {
     p.y += q.y;
 }
 
+inline void operator-=(Point2d& p, const Point2d& q) {
+    p.x += q.x;
+    p.y += q.y;
+}
+
 inline void operator-=(Point2d& p, const point& q) {
     p.x -= q.x;
     p.y -= q.y;
+}
+
+inline Point2d operator+(Point2d p, const Point2d& q) {
+    p += q;
+    return p;
+}
+
+inline Point2d operator-(Point2d p, const Point2d& q) {
+    p -= q;
+    return p;
 }
 
 static Point2d operator*(const double d, const Point2d& p) {
@@ -267,18 +282,13 @@ ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
 
 /// Compute rectangle and bounding box for segment \a seg.
 void ROI::computeRectangle(const Segment& seg) {
+    // Compute rectangle corners
     Point2d P(seg.x1,seg.y1), Q(seg.x2,seg.y2);
-
-    // compute rectangle extremities
-    double length = seg.length;
-    double dx = Q.x - P.x;
-    double dy = Q.y - P.y;
-    double dW = (seg.width/2+1)/length;
-
-    p_up   = Point2d(P.x + dW*dy - dx / length, P.y - dW*dx - dy / length);
-    p_down = Point2d(P.x - dW*dy - dx / length, P.y + dW*dx - dy / length);
-    q_up   = Point2d(Q.x + dW*dy + dx / length, Q.y - dW*dx + dy / length);
-    q_down = Point2d(Q.x - dW*dy + dx / length, Q.y + dW*dx + dy / length);
+    Point2d delta = (seg.width/2.0) / seg.length * (Q-P);
+    p_up   = P+delta;
+    p_down = P-delta;
+    q_up   = Q+delta;
+    q_down = Q-delta;
 
     // compute min/max along x/y axis
     xMin = max((int)floor(min({p_up.x, p_down.x, q_up.x, q_down.x})),0);
