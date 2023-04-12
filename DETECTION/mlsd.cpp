@@ -186,7 +186,7 @@ class ROI {
     bool inBB(const point& p) const {
         return inBB(p.x,p.y);
     }
-
+    
     void computeRectangle(const Segment& rawSegment);
     void findAlignedPixels(vector<point>& alignedPixels);
     void agregatePixels(const vector<point>& alignedPixels);
@@ -200,12 +200,18 @@ public:
         image_double a, image_double m, double lNT, int s);
 
     bool isVoid() const { return clusters.empty(); }
+    void setUsed(image_char& used);
     void mergeClusters(bool postLSD);
     bool filterClusters(vector<Cluster>& filtered, image_char& used,
-                        double log_eps, bool postLSD);
+                        double log_eps);
 };
 
 const int ROI::CLUSTER_NULL=-1;
+
+void ROI::setUsed(image_char& used) {
+    for(size_t i=0; i<definedPixels.size(); i++)
+        used->data[definedPixels[i]] = USED;
+}
 
 /// First constructor: a single segment (from previous scale).
 ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
@@ -332,7 +338,7 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
             if(! inBB(X,Y)) break;
 
             int idx = pixelCluster[pixelToIndex(X,Y)];
-            if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()){
+            if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()) {
                 if(postLSD && angle_diff(clusters[idx].getTheta(),theta)>prec)
                     continue;
                 inter.insert(idx);
@@ -404,10 +410,8 @@ void ROI::mergeClusters(bool postLSD) {
 
 /// Append valid clusters of the ROI to \a filtered.
 /// A valid cluster has not been merged and has a sufficiently large -log(NFA).
-/// If no cluster is valid in the ROI, discard all pixels aligned with the ROI,
-/// so that the next LSD pass will not detect anything there.
 bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
-                         double log_eps, bool postLSD) {
+                         double log_eps) {
     bool adding=false;
     for (size_t i=0; i<clusters.size(); i++) {
         // cluster has been merged and has no more meaning
@@ -420,11 +424,6 @@ bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
         clusters[i].setIndex(filtered.size());
         filtered.push_back(clusters[i]);
     }
-
-    // if no valid cluster, set pixels to used to avoid useless computation
-    if(!postLSD && !adding)
-        for(size_t j=0; j<definedPixels.size(); j++)
-            used->data[definedPixels[j]] = USED;
     return adding;
 }
 
@@ -454,9 +453,11 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
         // 1. merge greedily aligned clusters that should be (in NFA meaning)
         roi.mergeClusters(false);
         // 2. compute associated lines
-        if(! roi.filterClusters(clusters, used, log_eps, false))
-            // no lines have been found ==> keep the former one
-            finalLines.push_back(seg);
+        if(! roi.filterClusters(clusters, used, log_eps)) {
+            finalLines.push_back(seg); // no line found, keep the former one
+            // Tag pixels as used to avoid useless computation
+            roi.setUsed(used);
+        }
     }
     return clusters;
 }
@@ -480,7 +481,7 @@ void mergeClusters(vector<Cluster>& clusters,
     ROI roi(clusters, angles, modgrad, logNT, i_scale);
     roi.mergeClusters(true);
     clusters.clear();
-    roi.filterClusters(clusters, used, log_eps, true);
+    roi.filterClusters(clusters, used, log_eps);
 }
 
 void denseGradientFilter(vector<int>& noisyTexture, int w, int h, 
