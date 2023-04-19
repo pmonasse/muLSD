@@ -97,8 +97,8 @@ inline void operator+=(Point2d& p, const Point2d& q) {
 }
 
 inline void operator-=(Point2d& p, const Point2d& q) {
-    p.x += q.x;
-    p.y += q.y;
+    p.x -= q.x;
+    p.y -= q.y;
 }
 
 inline void operator-=(Point2d& p, const point& q) {
@@ -118,6 +118,12 @@ inline Point2d operator-(Point2d p, const Point2d& q) {
 
 static Point2d operator*(const double d, const Point2d& p) {
     return Point2d(d*p.x, d*p.y);
+}
+
+inline Point2d orthogonal(Point2d p) {
+    std::swap(p.x,p.y);
+    p.y = -p.y;
+    return p;
 }
 
 inline double crossProd(const Point2d &p, const Point2d& q) {
@@ -249,7 +255,7 @@ ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
 void ROI::computeRectangle(const Segment& seg) {
     // Compute rectangle corners
     Point2d P(seg.x1,seg.y1), Q(seg.x2,seg.y2);
-    Point2d delta = (seg.width/2.0) / seg.length * (Q-P);
+    Point2d delta = (seg.width/2.0) / seg.length * orthogonal(Q-P);
     p_up   = P+delta;
     p_down = P-delta;
     q_up   = Q+delta;
