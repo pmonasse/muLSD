@@ -330,7 +330,7 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
     const Point2d center = getCenter(c);
     const Point2d step = getSlope(c);
     const double theta = c.getTheta();
-    const double prec = c.getPrec();
+    const double prec = 1.0/c.length();
 
     // find clusters intersecting with current cluster direction
     for (int s = -1; s <= 1; s += 2){
@@ -346,7 +346,7 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
             int idx = pixelCluster[pixelToIndex(X,Y)];
             if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()) {
                 if(postLSD && angle_diff(clusters[idx].getTheta(),theta)>prec)
-                    continue;
+                    break;
                 inter.insert(idx);
                 // Post lsd processing: only look for next neighbor?
                 if(postLSD) break;
