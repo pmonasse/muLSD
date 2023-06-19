@@ -331,15 +331,15 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
     const Point2d center = getCenter(c);
     const Point2d step = getSlope(c);
     const double theta = c.getTheta();
-    const double prec = 1.0/c.length();
+    const double len  = c.length();
+    const double prec = 1.0/len;
 
     // find clusters intersecting with current cluster direction
     for (int s = -1; s <= 1; s += 2){
         const Point2d signed_step = s*step;
         const int cidx = c.getIndex();
-        Point2d p = center;
+        Point2d p = center+0.5*len*signed_step;
         while(true) {
-            p += signed_step;
             int X = floor(p.x + 0.5);
             int Y = floor(p.y + 0.5);
             if(! inBB(X,Y)) break;
@@ -354,6 +354,7 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
                 // Post lsd processing: only look for next neighbor?
                 if(postLSD) break;
             }
+            p += signed_step;
         }
     }
 }
