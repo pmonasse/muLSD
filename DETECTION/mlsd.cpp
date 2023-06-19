@@ -23,6 +23,7 @@
   ----------------------------------------------------------------------------*/
 
 #include "mlsd.hpp"
+#include <queue>
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -155,7 +156,7 @@ class CompareClusters {
     const std::vector<Cluster>& c;
 public:
     CompareClusters(const std::vector<Cluster>& v): c(v) {}
-    bool operator()(int i, int j) const { return c[i].getNFA()>c[j].getNFA(); }
+    bool operator()(int i, int j) const { return c[i].getNFA()<c[j].getNFA(); }
 };
 
 /// Region of interest: a rectangle inside the image.
@@ -345,7 +346,9 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
 
             int idx = pixelCluster[pixelToIndex(X,Y)];
             if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()) {
-                if(postLSD && angle_diff(clusters[idx].getTheta(),theta)>prec)
+                if(postLSD &&
+                   (angle_diff(clusters[idx].getTheta(),theta)>prec ||
+                    c.getNFA() < clusters[idx].getNFA()))
                     break;
                 inter.insert(idx);
                 // Post lsd processing: only look for next neighbor?
@@ -357,13 +360,15 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
 
 void ROI::mergeClusters(bool postLSD) {
     // sort clusters by decreasing NFA
-    vector<int> clusterStack(clusters.size());
-    std::iota(clusterStack.begin(), clusterStack.end(), 0);
-    std::sort(clusterStack.begin(), clusterStack.end(),
-              CompareClusters(clusters));
-
-    for (size_t i=0; i<clusterStack.size(); i++) {
-        int currIndex = clusterStack[i];
+    CompareClusters cmp(clusters);
+    std::vector<int> v(clusters.size());
+    std::iota(v.begin(), v.end(), 0);
+    priority_queue<int,std::vector<int>,CompareClusters> clusterQ(v.begin(),
+                                                                  v.end(),
+                                                                  cmp);
+    while(! clusterQ.empty()) {
+        int currIndex = clusterQ.top();
+        clusterQ.pop();
         Cluster& c = clusters[currIndex];
         if( c.isMerged() ) continue;
 
@@ -402,8 +407,8 @@ void ROI::mergeClusters(bool postLSD) {
         }
 
         c.setMerged();
-        clusterStack.push_back(clusters.size());
         clusters.push_back(megaCluster);
+        clusterQ.push(clusters.size()-1);
 
         // labelize clustered points with their new label
         for (size_t j=0; j<megaCluster.getPixels().size(); j++) {
