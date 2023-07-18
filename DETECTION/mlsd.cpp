@@ -229,7 +229,7 @@ ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
     prec = M_PI*rawSegment.prec;
 
     computeRectangle(rawSegment);
-    pixelCluster = vector<int>(sizeBB(), CLUSTER_NULL);
+    pixelCluster = vector<int>(sizeBB(), NOTDEF);
     vector<point> alignedPixels;
     findAlignedPixels(alignedPixels);
     agregatePixels(alignedPixels);
@@ -244,7 +244,7 @@ ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
     xMax = a->xsize-1;
     yMax = a->ysize-1;
     clusters = c;
-    pixelCluster = vector<int>(sizeBB(), CLUSTER_NULL);
+    pixelCluster = vector<int>(sizeBB(), NOTDEF);
     for(size_t i=0; i<clusters.size(); i++)
         for(size_t j=0; j<clusters[i].getPixels().size(); j++) {
             int idx = pixelToIndex( clusters[i].getPixels()[j] );
@@ -320,7 +320,7 @@ void ROI::agregatePixels(const vector<point>& alignedPixels) {
         // suppress clusters with too few pixels
         if(data.size() < MIN_SIZE_CLUSTER)
             for(size_t j=0; j<data.size(); j++)
-                pixelCluster[pixelToIndex(data[j])] = CLUSTER_NULL;
+                pixelCluster[pixelToIndex(data[j])] = NOTDEF;
         else
             clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
                                        prec, idCluster, scale));
@@ -345,7 +345,7 @@ void ROI::findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const {
             if(! inBB(X,Y)) break;
 
             int idx = pixelCluster[pixelToIndex(X,Y)];
-            if(idx!=CLUSTER_NULL && idx!=cidx && !clusters[idx].isMerged()) {
+            if(idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()) {
                 if(postLSD &&
                    (angle_diff(clusters[idx].getTheta(),theta)>prec ||
                     c.getNFA() < clusters[idx].getNFA()))
