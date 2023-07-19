@@ -1,11 +1,19 @@
 #include "image.h"
+#include "cmdLine.h"
 #include <iostream>
 
-const int nScales=3;
-
 int main(int argc, char* argv[]) {
+    int nScales=3;
+    CmdLine cmd;
+    cmd.add( make_option('n', nScales).doc("number of scales") );
+    try {
+        cmd.process(argc, argv);
+    } catch(const std::string& s) {
+        std::cerr << "Error: " << s << std::endl;
+        return 1;
+    }
     if(argc!=2) {
-        std::cerr << "Usage: " << argv[0] << " image.png" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " image.png\nOptions:\n" << cmd;
         return 1;
     }
     Image<float> im(argv[1]);

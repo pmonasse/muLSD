@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-PROJECT(MLSD)
+project(MLSD)
 
 find_package(PNG)
 if(PNG_FOUND)
@@ -19,8 +19,8 @@ endif(PNG_FOUND)
 include_directories(${PNG_INCLUDE_DIRS})
 
 include_directories(. DETECTION)
-		
-SET(LINE_DETECTION
+
+set(LINE_DETECTION
   DETECTION/lsd.c DETECTION/lsd.h
   DETECTION/segment.hpp DETECTION/segment.cpp
   DETECTION/mlsd.cpp DETECTION/mlsd.hpp
@@ -30,12 +30,14 @@ SET(LINE_DETECTION
 add_executable(LSD_MULTISCALE ${LINE_DETECTION}
   io_png.c io_png.h
   image.cpp image.h
+  cmdLine.h
   main_detection.cpp)
 
 target_compile_options(LSD_MULTISCALE PRIVATE -Wall -Wextra)
 target_link_libraries(LSD_MULTISCALE PRIVATE ${PNG_LIBRARIES})
 
-add_executable(test_pyramid test_pyramid.cpp io_png.h io_png.c image.h image.cpp)
+add_executable(test_pyramid
+  test_pyramid.cpp cmdLine.h io_png.h io_png.c image.h image.cpp)
 target_compile_options(test_pyramid PRIVATE -Wall -Wextra)
 target_link_libraries(test_pyramid PRIVATE ${PNG_LIBRARIES})
 
