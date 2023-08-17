@@ -34,7 +34,8 @@ using namespace std;
 int nbScales(int w, int h){
     int n = 1;
     int maxWH = max(w,h);
-    while(maxWH >1000){
+    //    while(maxWH >1000){
+    while(maxWH > 400){
         maxWH /= 2;
         n++;
     }
