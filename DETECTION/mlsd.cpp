@@ -196,7 +196,7 @@ class ROI {
     
     void computeRectangle(const Segment& rawSegment);
     void findAlignedPixels(vector<point>& alignedPixels);
-    void agregatePixels(const vector<point>& alignedPixels);
+    void aggregatePixels(const vector<point>& alignedPixels);
 
     void findIntersect(const Cluster& c, set<int>& inter, bool postLSD) const;
 
@@ -232,7 +232,7 @@ ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
     pixelCluster = vector<int>(sizeBB(), NOTDEF);
     vector<point> alignedPixels;
     findAlignedPixels(alignedPixels);
-    agregatePixels(alignedPixels);
+    aggregatePixels(alignedPixels);
 }
 
 /// Second constructor: the ROI is the full image, clusters already computed.
@@ -292,7 +292,7 @@ void ROI::findAlignedPixels(vector<point>& alignedPixels) {
 
 /// Find 8-connected components of alignedPixels, i.e., the initial clusters.
 /// The ones less than \c MIN_SIZE_CLUSTER are just ignored.
-void ROI::agregatePixels(const vector<point>& alignedPixels) {
+void ROI::aggregatePixels(const vector<point>& alignedPixels) {
     for(size_t i=0; i<alignedPixels.size(); i++) {
         int index = pixelToIndex(alignedPixels[i]);
         if(pixelCluster[index] != CLUSTER_NULL) continue;
