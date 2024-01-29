@@ -4,8 +4,10 @@
 
 int main(int argc, char* argv[]) {
     int nScales=3;
+    std::string prefix = "pyramid";
     CmdLine cmd;
     cmd.add( make_option('n', nScales).doc("number of scales") );
+    cmd.add( make_option('p', prefix).doc("prefix for output images") );
     try {
         cmd.process(argc, argv);
     } catch(const std::string& s) {
@@ -23,7 +25,7 @@ int main(int argc, char* argv[]) {
     }
     std::vector<Image<float>*> P = gaussPyramid(im, nScales);
     for(int i=0; i<nScales; i++) {
-        io_png_write_f32(("pyramid"+std::to_string(i)+".png").c_str(),
+        io_png_write_f32((prefix+std::to_string(i)+".png").c_str(),
                          P[i]->data, P[i]->w, P[i]->h, 1);
         delete P[i];
     }
