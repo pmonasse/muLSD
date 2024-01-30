@@ -165,10 +165,12 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
 
     for (int i = 0; i < nScales; i++){
         const float lengthThresh = thresh * (imagePyramid[i]->h + imagePyramid[i]->w)*0.5f;
-        std::cout << "length thresh=" << lengthThresh << std::endl;
-        cout << "scale step: " << i << endl;
+        //        std::cout << "length thresh=" << lengthThresh << std::endl;
+        cout << "scale:" << i
+             << " (" << imagePyramid[i]->w << 'x' << imagePyramid[i]->h << ")"
+             << flush;
         segments = LineSegmentDetection(*imagePyramid[i], noisyTexture, segments,4, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
-        cout << "#lines = " << segments.size() << endl;
+        cout << " #lines:" << segments.size() << endl;
         // upsize segments
         if (i != nScales - 1){
             for (size_t j = 0; j < segments.size(); j++){
