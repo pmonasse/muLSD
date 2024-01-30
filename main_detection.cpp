@@ -34,8 +34,7 @@ using namespace std;
 int nbScales(int w, int h){
     int n = 1;
     int maxWH = max(w,h);
-    //    while(maxWH >1000){
-    while(maxWH > 400){
+    while(maxWH > 500){
         maxWH /= 2;
         n++;
     }
@@ -53,12 +52,13 @@ int main(int argc, char* argv[]) {
     // parse arguments
     CmdLine cmd;
 
-    string picPath;
-
+    int nScales=0;
     double segment_length_threshold=0;//0.0009 ;
     bool multiscale = false;
-
+    
     // options
+    cmd.add( make_option('s', nScales, "scales")
+             .doc("nb scales (0=automatic)") );
     cmd.add( make_option('m', multiscale, "multiscale")
              .doc("multiscale option") );
     cmd.add( make_option('t', segment_length_threshold, "threshold")
@@ -83,7 +83,8 @@ int main(int argc, char* argv[]) {
 
     clock_t t0 = clock();
 
-    int nScales = multiscale? nbScales(im.w, im.h): 1;
+    if(nScales==0)
+        nScales = nbScales(im.w, im.h);
     vector<Image<float>*> imagePyramid = gaussPyramid(im, nScales);
     reverse(imagePyramid.begin(), imagePyramid.end());
 
