@@ -35,9 +35,7 @@ extern "C" {
 class Cluster {
     std::vector<point> pixels;
     rect rec;
-
-    // NFA parameters
-    double theta, nfa;
+    double nfa;
 
     // fusion parameters
     int index;
@@ -62,7 +60,7 @@ public:
 
     const std::vector<point>& getPixels() const { return pixels; }
     const rect& rectangle() const { return rec; }
-    double getTheta() const { return theta; }
+    double getTheta() const { return rec.theta; }
     double getNFA() const { return nfa; }
     int getIndex() const { return index; }
     void setIndex(int i) { index=i; }
