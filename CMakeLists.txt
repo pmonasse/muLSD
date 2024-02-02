@@ -18,23 +18,21 @@ else(PNG_FOUND)
 endif(PNG_FOUND)
 include_directories(${PNG_INCLUDE_DIRS})
 
-include_directories(. DETECTION)
-
 set(LINE_DETECTION
-  DETECTION/lsd.c DETECTION/lsd.h
-  DETECTION/segment.hpp DETECTION/segment.cpp
-  DETECTION/mlsd.cpp DETECTION/mlsd.hpp
-  DETECTION/detection.cpp DETECTION/detection.hpp)
+  lsd.c lsd.h
+  segment.cpp segment.hpp
+  mlsd.cpp mlsd.hpp
+  detection.cpp detection.hpp)
 
 # MULTISCALE LSD
-add_executable(LSD_MULTISCALE ${LINE_DETECTION}
+add_executable(muLSD ${LINE_DETECTION}
   io_png.c io_png.h
   image.cpp image.h
   cmdLine.h
   main_detection.cpp)
 
-target_compile_options(LSD_MULTISCALE PRIVATE -Wall -Wextra)
-target_link_libraries(LSD_MULTISCALE PRIVATE ${PNG_LIBRARIES})
+target_compile_options(muLSD PRIVATE -Wall -Wextra)
+target_link_libraries(muLSD PRIVATE ${PNG_LIBRARIES})
 
 add_executable(test_pyramid
   test_pyramid.cpp cmdLine.h io_png.h io_png.c image.h image.cpp)
