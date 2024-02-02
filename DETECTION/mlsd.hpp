@@ -37,7 +37,7 @@ class Cluster {
     rect rec;
 
     // NFA parameters
-    double theta, prec, nfa;
+    double theta, nfa;
 
     // fusion parameters
     int index;
@@ -63,7 +63,6 @@ public:
     const std::vector<point>& getPixels() const { return pixels; }
     const rect& rectangle() const { return rec; }
     double getTheta() const { return theta; }
-    double getPrec() const { return prec; }
     double getNFA() const { return nfa; }
     int getIndex() const { return index; }
     void setIndex(int i) { index=i; }

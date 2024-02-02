@@ -65,7 +65,8 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
     for (int i = 0; i < N; i++)
         data[i]=(double)im.data[i];
     image = new_image_double_ptr((unsigned int)im.w, (unsigned int)im.h, data);
-    angles = ll_angle(image, rho, &list_p, &mem_p, &modgrad, (unsigned int)n_bins);
+    angles = ll_angle(image, rho, &list_p, &mem_p, &modgrad,
+                      (unsigned int)n_bins);
     free((void *)image);
     delete[] data;
 
@@ -87,7 +88,8 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
      */
     logNT = 5.0 * (log10((double)xsize) + log10((double)ysize)) / 2.0
             + log10(11.0);
-    min_reg_size = (int)(-logNT / log10(p)); /* minimal number of points in region that can give a meaningful event */
+     /* minimal number of points in region that can give a meaningful event */
+    min_reg_size = (int)(-logNT / log10(p));
 
     used = new_image_char_ini(xsize, ysize, NOTUSED);
     reg = (point*) calloc((size_t)(xsize*ysize), sizeof(point));
@@ -158,7 +160,8 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
 }
 
 vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
-                               float thresh, bool multiscale){
+                               float thresh, bool multiscale,
+                               float grad){
     vector<Segment> segments;
     const int nScales = imagePyramid.size();
     vector<int> noisyTexture(0);
@@ -169,7 +172,9 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
         cout << "scale:" << i
              << " (" << imagePyramid[i]->w << 'x' << imagePyramid[i]->h << ")"
              << flush;
-        segments = LineSegmentDetection(*imagePyramid[i], noisyTexture, segments,4, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
+        float minGrad = (grad<=0? stdGradNorm(*imagePyramid[i]): grad);
+        if(grad<=0) cout << " grad:" << minGrad << flush;
+        segments = LineSegmentDetection(*imagePyramid[i], noisyTexture, segments, minGrad, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
         cout << " #lines:" << segments.size() << endl;
         // upsize segments
         if (i != nScales - 1){

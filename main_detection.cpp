@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
     int nScales=0;
     double segment_length_threshold=0;//0.0009 ;
     bool multiscale = false;
+    float grad=0;
     
     // options
     cmd.add( make_option('s', nScales, "scales")
@@ -63,6 +64,9 @@ int main(int argc, char* argv[]) {
              .doc("multiscale option") );
     cmd.add( make_option('t', segment_length_threshold, "threshold")
              .doc("threshold for segment length") );
+
+    cmd.add( make_option('g', grad, "gradient")
+             .doc("Min gradient norm (0=automatic)") );
 
     try {
         cmd.process(argc, argv);
@@ -89,7 +93,8 @@ int main(int argc, char* argv[]) {
     reverse(imagePyramid.begin(), imagePyramid.end());
 
     vector<Segment> segments =
-        lsd_multiscale(imagePyramid, segment_length_threshold, multiscale);
+        lsd_multiscale(imagePyramid, segment_length_threshold, multiscale,
+                       grad);
     saveLines(segments, argv[2]);
 
     cout << "Runtime: " << (clock()-t0)/float(CLOCKS_PER_SEC) << endl;

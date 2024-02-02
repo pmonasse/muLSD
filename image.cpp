@@ -79,3 +79,34 @@ std::vector<Image<float>*> gaussPyramid(const Image<float>& in, int n) {
     delete [] ker;
     return P;
 }
+
+/// Compute standard deviation of gradient norm.
+float stdGradNorm(const Image<float>& im) {
+    if(im.w<=2 || im.h<=2) // Unable to compute
+        return 0;
+    const int dx=1, dy=im.w;
+    const int n = (im.w-2)*(im.h-2);
+    float* grad = new float[n];
+    float* g = grad;
+    const float* p=im.data+dx+dy; // position (1,1)
+
+    // Computing mean
+    float m=0;
+    for(int y=1; y+1<im.h; y++) {
+        for(int x=1; x+1<im.w; x++, p++) {
+            float gx = (p[+dx]-p[-dx])*.5f;
+            float gy = (p[+dy]-p[-dy])*.5f;
+            m += (*g++ = hypot(gx,gy));
+        }
+        p += 2;
+    }
+    m /= n;
+
+    // std
+    float s=0;
+    for(int i=0; i<n; i++)
+        s += (grad[i]-m)*(grad[i]-m);
+    s /= n;
+    delete [] grad;
+    return sqrt(s);
+}

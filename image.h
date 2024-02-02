@@ -44,6 +44,7 @@ private:
 };
 
 std::vector<Image<float>*> gaussPyramid(const Image<float>& im, int n);
+float stdGradNorm(const Image<float>& im);
 
 /// Constructor
 template <typename T>

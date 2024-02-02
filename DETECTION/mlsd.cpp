@@ -39,7 +39,7 @@ static const int MIN_SIZE_CLUSTER=10;
 Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
                  const vector<point>& d, double t, double p,
                  int idx, int s)
-: pixels(d), theta(t), prec(p),
+: pixels(d), theta(t),
   index(idx), scale(s), merged(false) {
     region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
     nfa = rect_nfa(&rec, angles, logNT);
@@ -48,7 +48,7 @@ Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
 /// The rectangle containing the list of pixels is already known (after LSD).
 Cluster::Cluster(image_double angles, double logNT,
                  const point* d, int dsize, rect& r, int idx, int s)
-: pixels(d,d+dsize), rec(r), theta(r.theta), prec(r.prec),
+: pixels(d,d+dsize), rec(r), theta(r.theta),
   index(idx), scale(s), merged(false) {
     nfa = rect_nfa(&rec, angles, logNT);
 }
@@ -79,7 +79,7 @@ Cluster Cluster::united(const vector<Cluster>& clusters,
         const Cluster& c = clusters[*it];
         mergedPixels.insert(mergedPixels.end(),c.pixels.begin(),c.pixels.end());
     }
-    return Cluster(angles, modgrad, logNT, mergedPixels, theta, prec, 
+    return Cluster(angles, modgrad, logNT, mergedPixels, theta, rec.prec,
                    clusters.size(), scale);
 }
 

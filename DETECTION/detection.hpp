@@ -43,6 +43,7 @@
 //	(only for multiscale, allow a faster processing)
 // @multiscale enables/disable the multiscale processing
 std::vector<Segment> lsd_multiscale(const std::vector<Image<float>*>& imgPyr,
-                                    float thresh, bool multiscale);
+                                    float thresh, bool multiscale,
+                                    float grad);
 
 #endif
