@@ -5,20 +5,26 @@
   Yohann Salaun, Renaud Marlet, and Pascal Monasse
   ICPR 2016
   
-  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+  "LSD: a Line Segment Detector" by Rafael Grompone von Gioi,
+  Jeremie Jakubowicz, Jean-Michel Morel, and Gregory Randall,
+  Image Processing On Line, 2012. DOI:10.5201/ipol.2012.gjmr-lsd
+  http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd
   
+  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+  Copyright (c) 2007-2011 rafael grompone von gioi <grompone@gmail.com>
+
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the Mozilla Public License as
-  published by the Mozilla Foundation, either version 2.0 of the
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
   License, or (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  Mozilla Public License for more details.
-  
-  You should have received a copy of the Mozilla Public License
-  along with this program. If not, see <https://www.mozilla.org/en-US/MPL/2.0/>.
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
   ----------------------------------------------------------------------------*/
 
@@ -26,66 +32,19 @@
 #define MLSD_HPP
 
 #include "segment.hpp"
-extern "C" {
-#include "lsd.h"
-}
-#include <set>
+#include "image.h"
 #include <vector>
 
-class Cluster {
-    std::vector<point> pixels;
-    rect rec;
-    double nfa;
-
-    // fusion parameters
-    int index;
-    int scale;
-    bool merged;
-
-public:
-    Cluster() {}
-    Cluster(image_double angles, image_double modgrad, double logNT,
-            const std::vector<point>& d, double t, double p, int i, int s);
-    Cluster(image_double angles, double logNT,
-            const point* d, const int dsize, rect &r, int i, int s);
-
-    Cluster united(const std::vector<Cluster>& clusters,
-                   const std::set<int>& indexToMerge,
-                   image_double angles, image_double modgrad,
-                   double logNT) const;
-
-    double length() const;
-    Segment toSegment() const;
-    void setUsed(image_char& used) const;
-
-    const std::vector<point>& getPixels() const { return pixels; }
-    const rect& rectangle() const { return rec; }
-    double getTheta() const { return rec.theta; }
-    double getNFA() const { return nfa; }
-    int getIndex() const { return index; }
-    void setIndex(int i) { index=i; }
-    int getScale() const { return scale; }
-    bool isMerged() const { return merged; }
-    void setMerged() { merged=true; }
-};
-
-/// Compute the segments at current scale with information from previous scale
-std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
-                                       std::vector<Segment>& finalLines,
-                                       int i_scale,
-                                       image_double angles,
-                                       image_double modgrad, image_char& used,
-                                       double logNT, double log_eps);
-
-/// Merge clusters at same scale that belong to the same line
-void mergeClusters(std::vector<Cluster>& clusters,
-                   double minLength, int i_scale,
-                   image_double angles, image_double modgrad, image_char& used,
-                   double logNT, double log_eps);
-
-// filter some area in image for better SfM results and faster line detection
-void denseGradientFilter(std::vector<int>& noisyTexture, int w, int h, 
-                         image_double angles, image_char& used,
-                         int xsize, int ysize, int N);
+/*=================== MULTISCALE LSD INTERFACE ===================*/
+// detect the segments into picture given by im
+// If the multiscale approach is selected, even with 1 scale only,
+// a post processing will be applied to merge segments.
+// @imgPyrGaussian pyramid of scaled pictures
+// @thresh Delete segments of length lower than thresh% of size of the scaled picture 
+//	(only for multiscale, allow a faster processing)
+// @multiscale enables/disable the multiscale processing
+std::vector<Segment> lsd_multiscale(const std::vector<Image<float>*>& imgPyr,
+                                    float thresh, bool multiscale,
+                                    float grad);
 
 #endif

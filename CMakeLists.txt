@@ -21,15 +21,15 @@ include_directories(${PNG_INCLUDE_DIRS})
 set(LINE_DETECTION
   lsd.c lsd.h
   segment.cpp segment.hpp
-  mlsd.cpp mlsd.hpp
-  detection.cpp detection.hpp)
+  cluster.cpp cluster.hpp
+  mlsd.cpp mlsd.hpp)
 
 # MULTISCALE LSD
 add_executable(muLSD ${LINE_DETECTION}
   io_png.c io_png.h
   image.cpp image.h
   cmdLine.h
-  main_detection.cpp)
+  main.cpp)
 
 target_compile_options(muLSD PRIVATE -Wall -Wextra)
 target_link_libraries(muLSD PRIVATE ${PNG_LIBRARIES})

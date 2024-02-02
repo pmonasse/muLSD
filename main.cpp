@@ -22,9 +22,8 @@
 
   ----------------------------------------------------------------------------*/
 
-#include "detection.hpp"
+#include "mlsd.hpp"
 #include "cmdLine.h"
-#include "image.h"
 #include <fstream>
 
 using namespace std;
