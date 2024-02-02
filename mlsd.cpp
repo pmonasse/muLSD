@@ -34,7 +34,6 @@
 using namespace std;
 
 vector<Segment> LineSegmentDetection(const Image<float>& im,
-                                     vector<int>& noisyTexture,
                                      const vector<Segment>& rawSegments,
                                      double quant, double ang_th,
                                      double log_eps,
@@ -97,8 +96,6 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
 
     /* search for line segments with previous scale information */
     vector<Cluster> clusters = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
-    /* suppress dense part of gradients (great chance of noisy texture) */
-    //    denseGradientFilter(noisyTexture, im.w, im.h, angles, used, xsize, ysize, N);
 
     /* classical LSD algorithm
     note that for multiscale algo, some pixels are already set as used
@@ -165,7 +162,6 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
                                float grad){
     vector<Segment> segments;
     const int nScales = imagePyramid.size();
-    vector<int> noisyTexture(0);
 
     for (int i = 0; i < nScales; i++){
         const float lengthThresh = thresh * (imagePyramid[i]->h + imagePyramid[i]->w)*0.5f;
@@ -175,7 +171,7 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
              << flush;
         float minGrad = (grad<=0? stdGradNorm(*imagePyramid[i]): grad);
         if(grad<=0) cout << " grad:" << minGrad << flush;
-        segments = LineSegmentDetection(*imagePyramid[i], noisyTexture, segments, minGrad, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
+        segments = LineSegmentDetection(*imagePyramid[i], segments, minGrad, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
         cout << " #lines:" << segments.size() << endl;
         // upsize segments
         if (i != nScales - 1){

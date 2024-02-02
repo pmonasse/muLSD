@@ -83,9 +83,4 @@ void mergeClusters(std::vector<Cluster>& clusters,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps);
 
-// filter some area in image for better SfM results and faster line detection
-void denseGradientFilter(std::vector<int>& noisyTexture, int w, int h, 
-                         image_double angles, image_char& used,
-                         int xsize, int ysize, int N);
-
 #endif
