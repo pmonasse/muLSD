@@ -31,9 +31,7 @@
 struct Segment{
     // segment coordinates
     double x1, y1, x2, y2;
-
-    // segment geometric attributes
-    double width, length, angle;
+    double width;
 
     // NFA related arguments
     double log_nfa, prec;
@@ -42,16 +40,16 @@ struct Segment{
     int scale;
 
     Segment(){}
-    Segment(const double X1, const double Y1, const double X2, const double Y2,
-            const double w, const double p, const double nfa, const double s);
+    Segment(double X1, double Y1, double X2, double Y2,
+            double w, double p, double nfa, double s);
 
     // For multiscale LSD
-    void upscale(const double k);
+    Segment upscaled() const;
 
-    double qlength();
+    double length() const;
+    double angle() const;
 };
 
-std::istream& operator>>(std::istream &str, Segment& s);
-std::ostream& operator<<(std::ostream &str, const Segment& s);
+std::ostream& operator<<(std::ostream& str, const Segment& s);
 
 #endif

@@ -173,12 +173,6 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
         if(grad<=0) cout << " grad:" << minGrad << flush;
         segments = LineSegmentDetection(*imagePyramid[i], segments, minGrad, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
         cout << " #lines:" << segments.size() << endl;
-        // upsize segments
-        if (i != nScales - 1){
-            for (size_t j = 0; j < segments.size(); j++){
-                segments[j].upscale(2);
-            }
-        }
     }
 
     return segments;

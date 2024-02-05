@@ -223,7 +223,7 @@ ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
          double lNT, int s)
 : scale(s), angles(a), modgrad(m), logNT(lNT) {
     // gradient parameters
-    theta = rawSegment.angle;
+    theta = rawSegment.angle();
     prec = M_PI*rawSegment.prec;
 
     computeRectangle(rawSegment);
@@ -254,7 +254,7 @@ ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
 void ROI::computeRectangle(const Segment& seg) {
     // Compute rectangle corners
     Point2d P(seg.x1,seg.y1), Q(seg.x2,seg.y2);
-    Point2d delta = (seg.width/2.0) / seg.length * orthogonal(Q-P);
+    Point2d delta = (seg.width/2.0)/seg.length() * orthogonal(Q-P);
     p_up   = P+delta;
     p_down = P-delta;
     q_up   = Q+delta;
@@ -446,7 +446,7 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
                                   double logNT, double log_eps) {
     vector<Cluster> clusters;
     for (size_t i=0; i<rawSegments.size(); i++){
-        const Segment& seg = rawSegments[i];
+        Segment seg = rawSegments[i].upscaled();
         if(seg.scale != i_scale - 1) {
             finalLines.push_back(seg);
             continue;
