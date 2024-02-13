@@ -32,22 +32,25 @@ extern "C" {
 #include <set>
 #include <vector>
 
+/// A Cluster stores information about a segment according to LSD: a rectangular
+/// section of image with pixels of coinciding gradient direction. This is
+/// associated with an NFA. Initially, the cluster is a connected set of pixels,
+/// issued from LSD. Afterwards, clusters can be merged. Finally, it is
+/// converted to a Segment.
 class Cluster {
-    std::vector<point> pixels;
-    rect rec;
-    double nfa;
-
-    // fusion parameters
-    int index;
-    int scale;
-    bool merged;
+    std::vector<point> pixels; ///< Pixels with coinciding direction
+    rect rec;                  ///< Rectangle (issued from LSD)
+    double nfa;                ///< -log_10(NFA)
+    int index;                 ///< Unique identifier for the cluster
+    int scale;                 ///< Image scale of detection
+    bool merged;               ///< Merged clusters are ignored
 
 public:
-    Cluster() {}
+    Cluster() {} ///< The only sane behavior with this is to use operator= after
     Cluster(image_double angles, image_double modgrad, double logNT,
-            const std::vector<point>& d, double t, double p, int i, int s);
+            const std::vector<point>& d, double t, double p, int idx, int s);
     Cluster(image_double angles, double logNT,
-            const point* d, const int dsize, rect &r, int i, int s);
+            const point* d, int dsize, rect& r, int idx, int s);
 
     Cluster united(const std::vector<Cluster>& clusters,
                    const std::set<int>& indexToMerge,
@@ -69,7 +72,7 @@ public:
     void setMerged() { merged=true; }
 };
 
-/// Compute the segments at current scale with information from previous scale
+/// Compute the segments at current scale with information from previous scale.
 std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
                                        std::vector<Segment>& finalLines,
                                        int i_scale,
@@ -77,7 +80,7 @@ std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
                                        image_double modgrad, image_char& used,
                                        double logNT, double log_eps);
 
-/// Merge clusters at same scale that belong to the same line
+/// Merge clusters at same scale that belong to the same line.
 void mergeClusters(std::vector<Cluster>& clusters,
                    double minLength, int i_scale,
                    image_double angles, image_double modgrad, image_char& used,
