@@ -40,11 +40,8 @@
 // If the multiscale approach is selected, even with 1 scale only,
 // a post processing will be applied to merge segments.
 // @imgPyrGaussian pyramid of scaled pictures
-// @thresh Delete segments of length lower than thresh% of size of the scaled picture 
-//	(only for multiscale, allow a faster processing)
 // @multiscale enables/disable the multiscale processing
 std::vector<Segment> lsd_multiscale(const std::vector<Image<float>*>& imgPyr,
-                                    float thresh, bool multiscale,
-                                    float grad);
+                                    bool multiscale, float grad);
 
 #endif

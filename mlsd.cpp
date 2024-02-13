@@ -38,8 +38,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
                                      double quant, double ang_th,
                                      double log_eps,
                                      double density_th, int n_bins,
-                                     bool multiscale,
-                                     float minLength)
+                                     bool multiscale)
 {
     image_double image, angles, modgrad;
     image_char used;
@@ -139,7 +138,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
         }
 
     if(multiscale)
-        mergeClusters(clusters, minLength, angles,modgrad,used, logNT, log_eps);
+        mergeClusters(clusters, angles,modgrad,used, logNT, log_eps);
 
     // convert clusters into segments
     vector<Segment> lines;
@@ -157,14 +156,11 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
 }
 
 vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
-                               float thresh, bool multiscale,
-                               float grad){
+                               bool multiscale, float grad) {
     vector<Segment> segments;
     const int nScales = imagePyramid.size();
 
     for (int i = 0; i < nScales; i++){
-        const float lengthThresh = thresh * (imagePyramid[i]->h + imagePyramid[i]->w)*0.5f;
-        //        std::cout << "length thresh=" << lengthThresh << std::endl;
         cout << "scale:" << i
              << " (" << imagePyramid[i]->w << 'x' << imagePyramid[i]->h << ")"
              << flush;
@@ -172,7 +168,7 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
         if(grad<=0) cout << " grad:" << minGrad << flush;
         segments = LineSegmentDetection(*imagePyramid[i], segments,
                                         minGrad, 45.0f, 0.f, 0.7f, 1024,
-                                        multiscale, lengthThresh);
+                                        multiscale);
         cout << " #lines:" << segments.size() << endl;
     }
 

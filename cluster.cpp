@@ -485,20 +485,8 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
 }
 
 void mergeClusters(vector<Cluster>& clusters,
-                   double minLength,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps) {
-    // filter refinedLines wrt segment line
-    if(minLength>0) {
-        vector<Cluster> temp;
-        for (size_t i=0; i<clusters.size(); i++) {
-            if(clusters[i].length() >= minLength) {
-                clusters[i].setIndex(temp.size());
-                temp.push_back(clusters[i]);
-            }
-        }
-        clusters = temp;
-    }
     // merge greedily aligned clusters that should be merged (in NFA meaning)
     ROI roi(clusters, angles, modgrad, logNT);
     roi.mergeClusters(true);

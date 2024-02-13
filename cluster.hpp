@@ -78,7 +78,6 @@ std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
 
 /// Merge clusters at same scale that belong to the same line.
 void mergeClusters(std::vector<Cluster>& clusters,
-                   double minLength,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps);
 
