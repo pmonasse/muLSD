@@ -37,17 +37,16 @@ static const int MIN_SIZE_CLUSTER=10;
 /// Create a cluster from a list of pixels. This constructor needs to find
 /// the enclosing rectangle.
 Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
-                 const vector<point>& d, double t, double p,
-                 int idx, int s)
-: pixels(d), index(idx), scale(s), merged(false) {
+                 const vector<point>& d, double t, double p, int idx)
+: pixels(d), index(idx), merged(false) {
     region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
     nfa = rect_nfa(&rec, angles, logNT);
 }
 
 /// The rectangle containing the list of pixels is already known (after LSD).
 Cluster::Cluster(image_double angles, double logNT,
-                 const point* d, int dsize, rect& r, int idx, int s)
-: pixels(d,d+dsize), rec(r), index(idx), scale(s), merged(false) {
+                 const point* d, int dsize, rect& r, int idx)
+: pixels(d,d+dsize), rec(r), index(idx), merged(false) {
     nfa = rect_nfa(&rec, angles, logNT);
 }
 
@@ -59,7 +58,7 @@ double Cluster::length() const {
 /// Convert to Segment.
 Segment Cluster::toSegment() const {
     return Segment(rec.x1 + 0.5, rec.y1 + 0.5, rec.x2 + 0.5, rec.y2 + 0.5,
-                   rec.width, rec.p, nfa, scale);
+                   rec.width, rec.p, nfa);
 }
 
 /// Mark in image /c used the footprint of the cluster (its pixels).
@@ -81,7 +80,7 @@ Cluster Cluster::united(const vector<Cluster>& clusters,
         mergedPixels.insert(mergedPixels.end(),c.pixels.begin(),c.pixels.end());
     }
     return Cluster(angles, modgrad, logNT, mergedPixels, getTheta(), rec.prec,
-                   clusters.size(), scale);
+                   clusters.size());
 }
 
 // --- Point2d class: pixel with double coordinates ---
@@ -175,7 +174,6 @@ public:
 class ROI {
     static const int CLUSTER_NULL;
 
-    int scale; ///< Image scale of detection
     // angles info pointers
     image_double angles, modgrad;
     double logNT;
@@ -216,10 +214,8 @@ class ROI {
     set<int> findIntersect(const Cluster& c, bool postLSD) const;
     bool mergeCluster(Cluster& c, const set<int>& inter, Cluster& merged);
 public:
-    ROI(const Segment& seg,
-        image_double a, image_double m, double lNT, int s);
-    ROI(const vector<Cluster>& c,
-        image_double a, image_double m, double lNT, int s);
+    ROI(const Segment& seg,       image_double a, image_double m, double lNT);
+    ROI(const vector<Cluster>& c, image_double a, image_double m, double lNT);
 
     bool isVoid() const { return clusters.empty(); }
     void setUsed(image_char& used);
@@ -239,9 +235,8 @@ void ROI::setUsed(image_char& used) {
 
 /// First constructor: a single segment (from previous scale).
 /// Used in #refineRawSegments for merging clusters inside a rectangle.
-ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
-         double lNT, int s)
-: scale(s), angles(a), modgrad(m), logNT(lNT) {
+ROI::ROI(const Segment& rawSegment, image_double a, image_double m, double lNT)
+: angles(a), modgrad(m), logNT(lNT) {
     // gradient parameters
     theta = rawSegment.angle();
     prec = M_PI*rawSegment.prec;
@@ -255,9 +250,8 @@ ROI::ROI(const Segment& rawSegment, image_double a, image_double m,
 
 /// Second constructor: the ROI is the full image, clusters already computed.
 /// Used in mergeClusters.
-ROI::ROI(const vector<Cluster>& c, image_double a, image_double m,
-         double lNT, int s)
-: scale(s), angles(a), modgrad(m), logNT(lNT) {
+ROI::ROI(const vector<Cluster>& c, image_double a, image_double m, double lNT)
+: angles(a), modgrad(m), logNT(lNT) {
     width = (int)a->xsize;
     xMin = yMin = 0;
     xMax = a->xsize-1;
@@ -347,7 +341,7 @@ void ROI::aggregatePixels(const vector<point>& alignedPixels) {
                 pixelCluster[pixelToIndex(data[j])] = NOTDEF;
         else
             clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
-                                       prec, clusters.size(), scale));
+                                       prec, clusters.size()));
     }
 }
 
@@ -472,40 +466,26 @@ bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
 // --- Free functions ---
 
 vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
-                                  vector<Segment>& finalLines, int i_scale,
                                   image_double angles, image_double modgrad,
                                   image_char& used,
                                   double logNT, double log_eps) {
     vector<Cluster> clusters;
-    for (size_t i=0; i<rawSegments.size(); i++){
+    for(size_t i=0; i<rawSegments.size(); i++) {
         Segment seg = rawSegments[i].upscaled();
-        if(seg.scale != i_scale - 1) {
-            finalLines.push_back(seg);
+        ROI roi(seg, angles, modgrad, logNT);
+        if (roi.isVoid())
             continue;
-        }
-
-        ROI roi(seg, angles, modgrad, logNT, i_scale);
-
-        // if no pixels are detected, keep the former one
-        if (roi.isVoid()) {
-            finalLines.push_back(seg);
-            continue;
-        }
-
         // 1. merge greedily aligned clusters that should be (in NFA meaning)
         roi.mergeClusters(false);
         // 2. compute associated lines
-        if(! roi.filterClusters(clusters, used, log_eps)) {
-            finalLines.push_back(seg); // no line found, keep the former one
-            // Tag pixels as used to avoid useless computation
-            roi.setUsed(used);
-        }
+        if(! roi.filterClusters(clusters, used, log_eps))
+            roi.setUsed(used);// Tag pixels as used to avoid useless computation
     }
     return clusters;
 }
 
 void mergeClusters(vector<Cluster>& clusters,
-                   double minLength, int i_scale,
+                   double minLength,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps) {
     // filter refinedLines wrt segment line
@@ -520,7 +500,7 @@ void mergeClusters(vector<Cluster>& clusters,
         clusters = temp;
     }
     // merge greedily aligned clusters that should be merged (in NFA meaning)
-    ROI roi(clusters, angles, modgrad, logNT, i_scale);
+    ROI roi(clusters, angles, modgrad, logNT);
     roi.mergeClusters(true);
     clusters.clear();
     roi.filterClusters(clusters, used, log_eps);

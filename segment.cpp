@@ -27,13 +27,12 @@
 
 /// Constructor
 Segment::Segment(double X1, double Y1, double X2, double Y2,
-                 double w, double p, double nfa, double s) {
+                 double w, double p, double nfa) {
     x1 = X1; y1 = Y1;
     x2 = X2; y2 = Y2;
     width = w;
     prec = p;
     log_nfa = nfa;
-    scale = s;
 }
 
 // For multiscale LSD
@@ -55,6 +54,6 @@ double Segment::angle() const {
 
 std::ostream& operator<<(std::ostream& str, const Segment& s) {
     str << s.x1 << "  " << s.y1 << "  " << s.x2 << "  " << s.y2 << " "
-        << s.width << " " << s.prec << " " << s.log_nfa << " " << s.scale << '\n';
+        << s.width << " " << s.prec << " " << s.log_nfa << '\n';
     return str;
 }

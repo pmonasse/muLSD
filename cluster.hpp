@@ -42,15 +42,14 @@ class Cluster {
     rect rec;                  ///< Rectangle (issued from LSD)
     double nfa;                ///< -log_10(NFA)
     int index;                 ///< Unique identifier for the cluster
-    int scale;                 ///< Image scale of detection
     bool merged;               ///< Merged clusters are ignored
 
 public:
     Cluster() {} ///< The only sane behavior with this is to use operator= after
     Cluster(image_double angles, image_double modgrad, double logNT,
-            const std::vector<point>& d, double t, double p, int idx, int s);
+            const std::vector<point>& d, double t, double p, int idx);
     Cluster(image_double angles, double logNT,
-            const point* d, int dsize, rect& r, int idx, int s);
+            const point* d, int dsize, rect& r, int idx);
 
     Cluster united(const std::vector<Cluster>& clusters,
                    const std::set<int>& indexToMerge,
@@ -67,22 +66,19 @@ public:
     double getNFA() const { return nfa; }
     int getIndex() const { return index; }
     void setIndex(int i) { index=i; }
-    int getScale() const { return scale; }
     bool isMerged() const { return merged; }
     void setMerged() { merged=true; }
 };
 
 /// Compute the segments at current scale with information from previous scale.
 std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
-                                       std::vector<Segment>& finalLines,
-                                       int i_scale,
                                        image_double angles,
                                        image_double modgrad, image_char& used,
                                        double logNT, double log_eps);
 
 /// Merge clusters at same scale that belong to the same line.
 void mergeClusters(std::vector<Cluster>& clusters,
-                   double minLength, int i_scale,
+                   double minLength,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps);
 

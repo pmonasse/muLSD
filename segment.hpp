@@ -36,12 +36,9 @@ struct Segment{
     // NFA related arguments
     double log_nfa, prec;
 
-    // scale of last detection from 0 (rawest) to n (finest)
-    int scale;
-
     Segment(){}
     Segment(double X1, double Y1, double X2, double Y2,
-            double w, double p, double nfa, double s);
+            double w, double p, double nfa);
 
     // For multiscale LSD
     Segment upscaled() const;

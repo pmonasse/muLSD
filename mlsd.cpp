@@ -38,11 +38,9 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
                                      double quant, double ang_th,
                                      double log_eps,
                                      double density_th, int n_bins,
-                                     bool multiscale, int i_scale,
+                                     bool multiscale,
                                      float minLength)
 {
-    vector<Segment> returned_lines;
-
     image_double image, angles, modgrad;
     image_char used;
 
@@ -95,7 +93,8 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
     reg = (point*) calloc((size_t)(xsize*ysize), sizeof(point));
 
     /* search for line segments with previous scale information */
-    vector<Cluster> clusters = refineRawSegments(rawSegments, returned_lines, i_scale, angles, modgrad, used, logNT, log_eps);
+    vector<Cluster> clusters =
+        refineRawSegments(rawSegments, angles, modgrad, used, logNT, log_eps);
 
     /* classical LSD algorithm
     note that for multiscale algo, some pixels are already set as used
@@ -136,17 +135,17 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
                 continue;
 
             clusters.push_back(Cluster(angles, logNT, reg, reg_size, rec,
-                                       clusters.size(), i_scale));
+                                       clusters.size()));
         }
 
     if(multiscale)
-        mergeClusters(clusters, minLength, i_scale,
-                      angles, modgrad, used, logNT, log_eps);
+        mergeClusters(clusters, minLength, angles,modgrad,used, logNT, log_eps);
 
     // convert clusters into segments
+    vector<Segment> lines;
     for(size_t i=0; i<clusters.size(); i++)
         if(! clusters[i].isMerged())
-            returned_lines.push_back(clusters[i].toSegment());
+            lines.push_back(clusters[i].toSegment());
 
     free_image_double(angles);
     free_image_double(modgrad);
@@ -154,7 +153,7 @@ vector<Segment> LineSegmentDetection(const Image<float>& im,
     free((void *)mem_p);
     free(reg);
 
-    return returned_lines;
+    return lines;
 }
 
 vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
@@ -171,7 +170,9 @@ vector<Segment> lsd_multiscale(const vector<Image<float>*>& imagePyramid,
              << flush;
         float minGrad = (grad<=0? stdGradNorm(*imagePyramid[i]): grad);
         if(grad<=0) cout << " grad:" << minGrad << flush;
-        segments = LineSegmentDetection(*imagePyramid[i], segments, minGrad, 45.0f, 0.f, 0.7f, 1024, multiscale, i, lengthThresh);
+        segments = LineSegmentDetection(*imagePyramid[i], segments,
+                                        minGrad, 45.0f, 0.f, 0.7f, 1024,
+                                        multiscale, lengthThresh);
         cout << " #lines:" << segments.size() << endl;
     }
 
