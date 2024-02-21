@@ -465,6 +465,10 @@ bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
 
 // --- Free functions ---
 
+/// Refine \a rawSegments from previous image scale. The output is a collection
+/// of clusters. The rectangle of each segment is upscaled and connected
+/// components of pixels within at current scale with compatible direction
+/// may me merged.
 vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
                                   image_double angles, image_double modgrad,
                                   image_char& used,
@@ -475,19 +479,19 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
         ROI roi(seg, angles, modgrad, logNT);
         if (roi.isVoid())
             continue;
-        // 1. merge greedily aligned clusters that should be (in NFA meaning)
         roi.mergeClusters(false);
-        // 2. compute associated lines
         if(! roi.filterClusters(clusters, used, log_eps))
             roi.setUsed(used);// Tag pixels as used to avoid useless computation
     }
     return clusters;
 }
 
+/// Merge greedily aligned clusters that should be merged (in NFA meaning).
+/// Some of the input \a clusters are merged, generating some larger clusters.
+/// At output, the number of clusters is less or equal.
 void mergeClusters(vector<Cluster>& clusters,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps) {
-    // merge greedily aligned clusters that should be merged (in NFA meaning)
     ROI roi(clusters, angles, modgrad, logNT);
     roi.mergeClusters(true);
     clusters.clear();
