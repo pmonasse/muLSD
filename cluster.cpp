@@ -137,11 +137,11 @@ inline double crossProd(const Point2d &p, const Point2d& q) {
 }
 
 /// Test if a pixel position \c t is inside a rectangle defined by 4 vertices.
-static bool insideRect(Point2d pu, Point2d pd,
-                       Point2d qu, Point2d qd, const point& t) {
-    pu-=t; pd-=t; qu-=t; qd-=t;
-    return crossProd(pu, qu)*crossProd(pd, qd) < 0 &&
-           crossProd(pu, pd)*crossProd(qu, qd) < 0;
+static bool insideRect(Point2d p1, Point2d p2,
+                       Point2d q1, Point2d q2, const point& t) {
+    p1-=t; p2-=t; q1-=t; q2-=t;
+    return crossProd(p1, q1)*crossProd(p2, q2) < 0 &&
+           crossProd(p1, p2)*crossProd(q1, q2) < 0;
 }
 
 /// Get center of rectangle: weigthed centroid of pixels in the cluster.
@@ -170,7 +170,11 @@ public:
 };
 
 /// Region of interest: a rectangle inside the image.
-/// It is used to merge clusters.
+/// It is used to merge clusters within the rectangle.
+/// There are two constructors:
+/// 1. with a \a Segment: ROI is the rectangle defined by the segment.
+/// 2. with a collections of clusters: ROI is the full image.
+/// Fields #p1, #p2, #q1, #q2 and #definedPixels are used only for case 1.
 class ROI {
     static const int CLUSTER_NULL;
 
@@ -181,7 +185,7 @@ class ROI {
     // rectangle parameters
     int width; ///< Logical width of 2D array #pixelCluster
     int xMin, xMax, yMin, yMax; ///< Axis-aligned bounding box
-    Point2d p_up, p_down, q_up, q_down; ///< Corners of rectangle
+    Point2d p1, p2, q1, q2; ///< Corners of rectangle
 
     // aligned pixels
     double theta, prec; ///< Direction angle and precision
@@ -270,18 +274,16 @@ void ROI::computeRectangle(const Segment& seg) {
     // Compute rectangle corners
     Point2d P(seg.x1-1,seg.y1-1), Q(seg.x2-1,seg.y2-1); // -1: cluster->segment involved +0.5, but at scale 1/2.
     Point2d delta = (seg.width/2.0)/seg.length() * orthogonal(Q-P);
-    p_up   = P+delta;
-    p_down = P-delta;
-    q_up   = Q+delta;
-    q_down = Q-delta;
+    p1 = P+delta;
+    p2 = P-delta;
+    q1 = Q+delta;
+    q2 = Q-delta;
 
     // compute min/max along x/y axis
-    xMin = max((int)floor(min({p_up.x, p_down.x, q_up.x, q_down.x})),0);
-    xMax = min((int)ceil (max({p_up.x, p_down.x, q_up.x, q_down.x})),
-               (int)angles->xsize-1);
-    yMin = max((int)floor(min({p_up.y, p_down.y, q_up.y, q_down.y})),0);
-    yMax = min((int)ceil (max({p_up.y, p_down.y, q_up.y, q_down.y})),
-               (int)angles->ysize-1);
+    xMin = max((int)floor(min({p1.x, p2.x, q1.x, q2.x})), 0);
+    xMax = min((int)ceil (max({p1.x, p2.x, q1.x, q2.x})), (int)angles->xsize-1);
+    yMin = max((int)floor(min({p1.y, p2.y, q1.y, q2.y})), 0);
+    yMax = min((int)ceil (max({p1.y, p2.y, q1.y, q2.y})), (int)angles->ysize-1);
     width = xMax-xMin+1;
 }
 
@@ -291,7 +293,7 @@ void ROI::computeRectangle(const Segment& seg) {
 void ROI::findAlignedPixels(vector<point>& alignedPixels) {
     for(point p = {xMin,yMin}; p.y<=yMax; p.y++)
         for(p.x=xMin; p.x<=xMax; p.x++)
-            if(insideRect(p_up, p_down, q_up, q_down, p)) {
+            if(insideRect(p1, p2, q1, q2, p)) {
                 int i = p.x + p.y*angles->xsize;
                 if(angles->data[i] != NOTDEF) {
                     definedPixels.push_back(i);
