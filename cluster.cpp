@@ -478,12 +478,12 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
     vector<Cluster> clusters;
     for(size_t i=0; i<rawSegments.size(); i++) {
         Segment seg = rawSegments[i].upscaled();
-        ROI roi(seg, angles, modgrad, logNT);
+        ROI roi(seg, angles, modgrad, logNT); // Constructor with segment
         if (roi.isVoid())
             continue;
         roi.mergeClusters(false);
         if(! roi.filterClusters(clusters, used, log_eps))
-            roi.setUsed(used);// Tag pixels as used to avoid useless computation
+            roi.setUsed(used); // Tag pixels inside to prevent detection by LSD
     }
     return clusters;
 }
@@ -494,7 +494,7 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
 void mergeClusters(vector<Cluster>& clusters,
                    image_double angles, image_double modgrad, image_char& used,
                    double logNT, double log_eps) {
-    ROI roi(clusters, angles, modgrad, logNT);
+    ROI roi(clusters, angles, modgrad, logNT); // ROI is the full image
     roi.mergeClusters(true);
     clusters.clear();
     roi.filterClusters(clusters, used, log_eps);
