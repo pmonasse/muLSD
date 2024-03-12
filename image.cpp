@@ -64,14 +64,14 @@ void convx_sub2(const Image<float>& im, const float* ker, int radius,
 std::vector<Image<float>*> gaussPyramid(const Image<float>& in, int n) {
     std::vector<Image<float>*> P;
     Image<float>* im = new Image<float>(in.w, in.h);
-    for(int i=0; i< in.w*in.h; i++)
+    for(int i=0; i<in.w*in.h; i++)
         im->data[i] = in.data[i];
     P.push_back(im);
     int radius;
     float* ker = gaussKernel(radius);
     Image<float> xconv;
     for(int i=1; i<n; i++) {
-        convx_sub2(*P.back(), ker, 5, xconv);
+        convx_sub2(*P.back(), ker, radius, xconv);
         im = new Image<float>;
         convx_sub2(xconv, ker, radius, *im);
         P.push_back(im);
