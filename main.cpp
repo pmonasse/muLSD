@@ -85,7 +85,6 @@ int main(int argc, char* argv[]) {
     if(nScales==0)
         nScales = nbScales(im.w, im.h);
     vector<Image<float>*> imagePyramid = gaussPyramid(im, nScales);
-    reverse(imagePyramid.begin(), imagePyramid.end());
 
     vector<Segment> segments = lsd_multiscale(imagePyramid, multiscale, grad);
     saveLines(segments, argv[2]);
