@@ -29,6 +29,9 @@
 #include <cmath>
 using namespace std;
 
+typedef image_char   Cimage;
+typedef image_double Dimage;
+
 /// Minimum number of pixels for a valid cluster
 static const int MIN_SIZE_CLUSTER=10;
 
@@ -36,7 +39,7 @@ static const int MIN_SIZE_CLUSTER=10;
 
 /// Create a cluster from a list of pixels. This constructor needs to find
 /// the enclosing rectangle.
-Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
+Cluster::Cluster(Dimage angles, Dimage modgrad, double logNT,
                  const vector<point>& d, double t, double p, int idx)
 : pixels(d), index(idx), merged(false) {
     region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
@@ -44,7 +47,7 @@ Cluster::Cluster(image_double angles, image_double modgrad, double logNT,
 }
 
 /// The rectangle containing the list of pixels is already known (after LSD).
-Cluster::Cluster(image_double angles, double logNT,
+Cluster::Cluster(Dimage angles, double logNT,
                  const point* d, int dsize, rect& r, int idx)
 : pixels(d,d+dsize), rec(r), index(idx), merged(false) {
     nfa = rect_nfa(&rec, angles, logNT);
@@ -62,7 +65,7 @@ Segment Cluster::toSegment() const {
 }
 
 /// Mark in image /c used the footprint of the cluster (its pixels).
-void Cluster::setUsed(image_char& used) const {
+void Cluster::setUsed(Cimage& used) const {
     for(size_t j=0; j<pixels.size(); j++)
         used->data[pixels[j].x + pixels[j].y*used->xsize] = USED;
 }
@@ -71,7 +74,7 @@ void Cluster::setUsed(image_char& used) const {
 /// \a indexMerge.
 Cluster Cluster::united(const vector<Cluster>& clusters,
                         const set<int>& indexMerge,
-                        image_double angles, image_double modgrad,
+                        Dimage angles, Dimage modgrad,
                         double logNT) const {
     // merge pixel sets
     vector<point> mergedPixels = pixels;
@@ -179,7 +182,7 @@ class ROI {
     static const int CLUSTER_NULL;
 
     // angles info pointers
-    image_double angles, modgrad;
+    Dimage angles, modgrad;
     double logNT;
 
     // rectangle parameters
@@ -211,20 +214,20 @@ class ROI {
     }
     
     void computeRectangle(const Segment& rawSegment);
-    void findAlignedPixels(vector<point>& alignedPixels);
+    void findAlignedPixels(vector<point>& alignedPixels, Cimage used);
     vector<point> findCC(point seed, int idx);
     void aggregatePixels(const vector<point>& alignedPixels);
 
     set<int> findIntersect(const Cluster& c, bool postLSD) const;
     bool mergeCluster(Cluster& c, const set<int>& inter, Cluster& merged);
 public:
-    ROI(const Segment& seg,       image_double a, image_double m, double lNT);
-    ROI(const vector<Cluster>& c, image_double a, image_double m, double lNT);
+    ROI(const Segment& seg,       Dimage a, Dimage m, double lNT, Cimage used);
+    ROI(const vector<Cluster>& c, Dimage a, Dimage m, double lNT);
 
     bool isVoid() const { return clusters.empty(); }
-    void setUsed(image_char& used);
+    void setUsed(Cimage& used);
     void mergeClusters(bool postLSD);
-    bool filterClusters(vector<Cluster>& filtered, image_char& used,
+    bool filterClusters(vector<Cluster>& filtered, Cimage& used,
                         double log_eps);
 };
 
@@ -232,14 +235,14 @@ const int ROI::CLUSTER_NULL=-1;
 
 /// Mark pixels as used in global image. This prevents multiple detections of
 /// the same cluster.
-void ROI::setUsed(image_char& used) {
+void ROI::setUsed(Cimage& used) {
     for(size_t i=0; i<definedPixels.size(); i++)
         used->data[definedPixels[i]] = USED;
 }
 
 /// First constructor: a single segment (from previous scale).
-/// Used in #refineRawSegments for merging clusters inside a rectangle.
-ROI::ROI(const Segment& rawSegment, image_double a, image_double m, double lNT)
+/// Called in #refineRawSegments for merging clusters inside a rectangle.
+ROI::ROI(const Segment& rawSegment, Dimage a, Dimage m, double lNT, Cimage used)
 : angles(a), modgrad(m), logNT(lNT) {
     // gradient parameters
     theta = rawSegment.angle();
@@ -248,13 +251,13 @@ ROI::ROI(const Segment& rawSegment, image_double a, image_double m, double lNT)
     computeRectangle(rawSegment);
     pixelCluster = vector<int>(sizeBB(), NOTDEF);
     vector<point> alignedPixels;
-    findAlignedPixels(alignedPixels);
+    findAlignedPixels(alignedPixels, used);
     aggregatePixels(alignedPixels);
 }
 
 /// Second constructor: the ROI is the full image, clusters already computed.
 /// Used in mergeClusters.
-ROI::ROI(const vector<Cluster>& c, image_double a, image_double m, double lNT)
+ROI::ROI(const vector<Cluster>& c, Dimage a, Dimage m, double lNT)
 : angles(a), modgrad(m), logNT(lNT) {
     width = (int)a->xsize;
     xMin = yMin = 0;
@@ -287,15 +290,17 @@ void ROI::computeRectangle(const Segment& seg) {
     width = xMax-xMin+1;
 }
 
-/// Insert in \a alignedPixels the pixels inside \a rect whose gradient
-/// direction is aligned. Pixels inside the rectangle with non-null gradient
-/// are registered in \a definedPixels.
-void ROI::findAlignedPixels(vector<point>& alignedPixels) {
+/// Insert in \a alignedPixels the pixels inside the ROI whose gradient
+/// direction is aligned. Pixels inside the ROI with non-null gradient
+/// are registered in field \a definedPixels.
+/// As different ROI may overlap, some pixels may have been already used in a
+/// previous ROI (checked with image \a used); they are then skipped here.
+void ROI::findAlignedPixels(vector<point>& alignedPixels, Cimage used) {
     for(point p = {xMin,yMin}; p.y<=yMax; p.y++)
         for(p.x=xMin; p.x<=xMax; p.x++)
             if(insideRect(p1, p2, q1, q2, p)) {
                 int i = p.x + p.y*angles->xsize;
-                if(angles->data[i] != NOTDEF) {
+                if(used->data[i] == NOTUSED && angles->data[i] != NOTDEF) {
                     definedPixels.push_back(i);
                     if(angle_diff(angles->data[i], theta) < prec) {
                         alignedPixels.push_back(p);
@@ -451,7 +456,7 @@ void ROI::mergeClusters(bool postLSD) {
 
 /// Append valid clusters of the ROI to \a filtered.
 /// A valid cluster has not been merged and has a sufficiently large -log(NFA).
-bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
+bool ROI::filterClusters(vector<Cluster>& filtered, Cimage& used,
                          double log_eps) {
     bool adding=false;
     for (size_t i=0; i<clusters.size(); i++) {
@@ -472,13 +477,13 @@ bool ROI::filterClusters(vector<Cluster>& filtered, image_char& used,
 /// components of pixels within at current scale with compatible direction
 /// may me merged.
 vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
-                                  image_double angles, image_double modgrad,
-                                  image_char& used,
+                                  Dimage angles, Dimage modgrad,
+                                  Cimage& used,
                                   double logNT, double log_eps) {
     vector<Cluster> clusters;
     for(size_t i=0; i<rawSegments.size(); i++) {
         Segment seg = rawSegments[i].upscaled();
-        ROI roi(seg, angles, modgrad, logNT); // Constructor with segment
+        ROI roi(seg, angles, modgrad, logNT, used); // Constructor with segment
         if (roi.isVoid())
             continue;
         roi.mergeClusters(false);
@@ -492,7 +497,7 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
 /// Some of the input \a clusters are merged, generating some larger clusters.
 /// At output, the number of clusters is less or equal.
 void mergeClusters(vector<Cluster>& clusters,
-                   image_double angles, image_double modgrad, image_char& used,
+                   Dimage angles, Dimage modgrad, Cimage& used,
                    double logNT, double log_eps) {
     ROI roi(clusters, angles, modgrad, logNT); // ROI is the full image
     roi.mergeClusters(true);
