@@ -33,140 +33,99 @@
 #include <cmath>
 using namespace std;
 
-vector<Segment> LineSegmentDetection(const Image<float>& im,
-                                     const vector<Segment>& rawSegments,
-                                     double quant, double ang_th,
-                                     double log_eps,
-                                     double density_th, int n_bins,
-                                     bool multiscale)
-{
-    image_double image, angles, modgrad;
-    image_char used;
+/// Classical main entry point of LSD with two additions:
+/// 1. Pre-processing: refine segments detected at previous scale;
+/// 2. Post-processing: Merge close aligned segments.
+/// \param im image at current scale.
+/// \param[in,out] segments (in) at previous scale, (out) at current scale.
+/// \param grad minimum gradient norm, still scaled by sine of angle precision.
+/// \param ang_th angle tolerance (degree), normally 22.5 by default in LSD,
+/// set at 45 in muLSD.
+/// \param log_eps threshold for detection: -log10(NFA).
+/// \param density_th min density of aligned pixels inside a segment.
+/// \param n_bins number of bins in quantization of grad norm for linear sort.
+void LineSegmentDetection(const Image<float>& im,
+                          vector<Segment>& segments,
+                          double grad, double ang_th=45.0,
+                          double log_eps=0,
+                          double density_th=0.70, int n_bins=1024) {
+    const double p = ang_th / 180.0;      // probability
+    const double prec = M_PI * p;         // angle tolerance
+    const double rho = grad / sin(prec); // gradient magnitude threshold
 
-    struct coorlist * list_p;
-    void * mem_p;
-    struct rect rec;
-    struct point * reg;
-    int reg_size, min_reg_size;
-    unsigned int xsize, ysize;
-    double rho, reg_angle, prec, p, log_nfa, logNT;
+    unsigned int xsize=im.w, ysize=im.h;
+    const unsigned int N = im.w*im.h;
 
-    /* angle tolerance */
-    prec = M_PI * ang_th /180.0;
-    p = ang_th / 180.0;
-    rho = quant / sin(prec); /* gradient magnitude threshold */
-
-    /* load image and compute angle at each pixel */
-    const int N = im.w*im.h;
+    // Compute angle of gradient direction at each pixel
     double* data = new double[N];
-    for (int i = 0; i < N; i++)
+    for(unsigned int i=0; i<N; i++)
         data[i]=(double)im.data[i];
-    image = new_image_double_ptr((unsigned int)im.w, (unsigned int)im.h, data);
-    angles = ll_angle(image, rho, &list_p, &mem_p, &modgrad,
-                      (unsigned int)n_bins);
-    free((void *)image);
+    image_double image = new_image_double_ptr(xsize, ysize, data);
+    coorlist* list_p; void* mem_p; image_double modgrad;
+    image_double angles = ll_angle(image, rho, &list_p, &mem_p, &modgrad,
+                                   (unsigned int)n_bins);
+    free((void*)image);
     delete[] data;
 
-    xsize = angles->xsize;
-    ysize = angles->ysize;
+    const double logNT = 5*log10((double)N)/2+log10(11.0); // Number of Tests
+    // Min number of points in region that can give a meaningful event
+    const int min_reg_size = (int)(-logNT / log10(p));
 
-    /* Number of Tests - NT
+    image_char used = new_image_char_ini(xsize, ysize, NOTUSED);
+    point* reg = (point*)calloc((size_t)(xsize*ysize), sizeof(point));
 
-     The theoretical number of tests is Np.(XY)^(5/2)
-     where X and Y are number of columns and rows of the image.
-     Np corresponds to the number of angle precisions considered.
-     As the procedure 'rect_improve' tests 5 times to halve the
-     angle precision, and 5 more times after improving other factors,
-     11 different precision values are potentially tested. Thus,
-     the number of tests is
-     11 * (X*Y)^(5/2)
-     whose logarithm value is
-     log10(11) + 5/2 * (log10(X) + log10(Y)).
-     */
-    logNT = 5.0 * (log10((double)xsize) + log10((double)ysize)) / 2.0
-            + log10(11.0);
-     /* minimal number of points in region that can give a meaningful event */
-    min_reg_size = (int)(-logNT / log10(p));
-
-    used = new_image_char_ini(xsize, ysize, NOTUSED);
-    reg = (point*) calloc((size_t)(xsize*ysize), sizeof(point));
-
-    /* search for line segments with previous scale information */
+    // 1. Pre-processing: Refine line segments from previous scale
     vector<Cluster> clusters =
-        refineRawSegments(rawSegments, angles, modgrad, used, logNT, log_eps);
+        refineRawSegments(segments, angles, modgrad, used, logNT, log_eps);
 
-    /* classical LSD algorithm
-    note that for multiscale algo, some pixels are already set as used
-    */
-    for (; list_p != NULL; list_p = list_p->next)
-        if (used->data[list_p->x + list_p->y * used->xsize] == NOTUSED &&
-                angles->data[list_p->x + list_p->y * angles->xsize] != NOTDEF)
-            /* there is no risk of double comparison problems here
-         because we are only interested in the exact NOTDEF value */
-        {
-            /* find the region of connected point and ~equal angle */
+    // 1.5 Regular search outside existing segments' area
+    for(; list_p != NULL; list_p = list_p->next)
+        if(used->data[list_p->x + list_p->y * xsize] == NOTUSED &&
+           angles->data[list_p->x + list_p->y * xsize] != NOTDEF) {
+            int reg_size; double reg_angle;
             region_grow(list_p->x, list_p->y, angles, reg, &reg_size,
-                        &reg_angle, used, prec);
-
-            /* reject small regions */
-            if (reg_size < min_reg_size) continue;
-
-            /* construct rectangular approximation for the region */
-            region2rect(reg, reg_size, modgrad, reg_angle, prec, p, &rec);
-
-            /* Check if the rectangle exceeds the minimal density of
-         region points. If not, try to improve the region.
-         The rectangle will be rejected if the final one does
-         not fulfill the minimal density condition.
-         This is an addition to the original LSD algorithm published in
-         "LSD: A Fast Line Segment Detector with a False Detection Control"
-         by R. Grompone von Gioi, J. Jakubowicz, J.M. Morel, and G. Randall.
-         The original algorithm is obtained with density_th = 0.0.
-         */
-            if (!refine(reg, &reg_size, modgrad, reg_angle,
-                        prec, p, &rec, used, angles, density_th)){
+                        &reg_angle, used, prec); // Find CC
+            if(reg_size < min_reg_size) // reject too small regions
                 continue;
-            }
-
-            /* compute NFA value */
-            log_nfa = rect_improve(&rec, angles, logNT, log_eps);
+            rect rec; // rectangular approximation for the region
+            region2rect(reg, reg_size, modgrad, reg_angle, prec, p, &rec);
+            if(! refine(reg, &reg_size, modgrad, reg_angle,
+                        prec, p, &rec, used, angles, density_th))
+                continue;
+            double log_nfa = rect_improve(&rec, angles, logNT, log_eps);
             if(log_nfa <= log_eps)
                 continue;
-
             clusters.push_back(Cluster(angles, logNT, reg, reg_size, rec,
                                        clusters.size()));
         }
 
-    if(multiscale)
-        mergeClusters(clusters, angles,modgrad,used, logNT, log_eps);
+    // 2. Post-processing: merge aligned clusters
+    mergeClusters(clusters, angles,modgrad,used, logNT, log_eps);
 
-    // convert clusters into segments
-    vector<Segment> lines;
+    // Convert clusters into segments
+    segments.clear();
     for(size_t i=0; i<clusters.size(); i++)
         if(! clusters[i].isMerged())
-            lines.push_back(clusters[i].toSegment());
+            segments.push_back(clusters[i].toSegment());
 
     free_image_double(angles);
     free_image_double(modgrad);
     free_image_char(used);
-    free((void *)mem_p);
+    free((void*)mem_p);
     free(reg);
-
-    return lines;
 }
 
-vector<Segment> lsd_multiscale(const vector<Image<float>*>& imgs,
-                               bool multiscale, float grad) {
+/// In the image pyramid, the first one is the original image and subsequent
+/// are scaled-down versions of factor 2.
+/// When grad is zero, set it at standard deviation of gradient magnitude. 
+vector<Segment> lsd_multiscale(const vector<Image<float>*>& imgs, float grad) {
     vector<Segment> segments;
     for(int i=(int)imgs.size()-1; i>=0; i--) {
         cout <<"scale:" <<i <<" (" <<imgs[i]->w <<'x'<<imgs[i]->h <<")" <<flush;
         float minGrad = (grad<=0? stdGradNorm(*imgs[i]): grad);
         if(grad<=0) cout << " grad:" << minGrad << flush;
-        segments = LineSegmentDetection(*imgs[i], segments,
-                                        minGrad, 45.0f, 0.f, 0.7f, 1024,
-                                        multiscale);
+        LineSegmentDetection(*imgs[i], segments, minGrad);
         cout << " #lines:" << segments.size() << endl;
     }
-
     return segments;
 }

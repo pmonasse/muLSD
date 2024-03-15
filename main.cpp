@@ -52,14 +52,11 @@ int main(int argc, char* argv[]) {
     CmdLine cmd;
 
     int nScales=0;
-    bool multiscale = false;
     float grad=0;
     
     // options
     cmd.add( make_option('s', nScales, "scales")
              .doc("nb scales (0=automatic)") );
-    cmd.add( make_option('m', multiscale, "multiscale")
-             .doc("multiscale option") );
     cmd.add( make_option('g', grad, "gradient")
              .doc("Min gradient norm (0=automatic)") );
 
@@ -86,7 +83,7 @@ int main(int argc, char* argv[]) {
         nScales = nbScales(im.w, im.h);
     vector<Image<float>*> imagePyramid = gaussPyramid(im, nScales);
 
-    vector<Segment> segments = lsd_multiscale(imagePyramid, multiscale, grad);
+    vector<Segment> segments = lsd_multiscale(imagePyramid, grad);
     saveLines(segments, argv[2]);
 
     cout << "Runtime: " << (clock()-t0)/float(CLOCKS_PER_SEC) << endl;

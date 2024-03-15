@@ -35,13 +35,10 @@
 #include "image.h"
 #include <vector>
 
-/*=================== MULTISCALE LSD INTERFACE ===================*/
-// detect the segments into picture given by im
-// If the multiscale approach is selected, even with 1 scale only,
-// a post processing will be applied to merge segments.
-// @imgPyrGaussian pyramid of scaled pictures
-// @multiscale enables/disable the multiscale processing
+// muLSD interface: detect segments from image pyramid.
+// \param imgPyr pyramid of scaled images.
+// \param grad minimum gradient magniture (0=automatic).
 std::vector<Segment> lsd_multiscale(const std::vector<Image<float>*>& imgPyr,
-                                    bool multiscale, float grad);
+                                    float grad);
 
 #endif
