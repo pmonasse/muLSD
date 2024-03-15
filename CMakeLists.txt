@@ -22,7 +22,7 @@ set(LINE_DETECTION
   lsd.c lsd.h
   segment.cpp segment.hpp
   cluster.cpp cluster.hpp
-  mlsd.cpp mlsd.hpp)
+  mulsd.cpp mulsd.hpp)
 
 # MULTISCALE LSD
 add_executable(muLSD ${LINE_DETECTION}
