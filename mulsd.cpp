@@ -1,32 +1,11 @@
-/*----------------------------------------------------------------------------  
-  This code is part of the following publication and was subject
-  to peer review:
-  "Multiscale line segment detector for robust and accurate SfM" by
-  Yohann Salaun, Renaud Marlet, and Pascal Monasse
-  ICPR 2016
-  
-  "LSD: a Line Segment Detector" by Rafael Grompone von Gioi,
-  Jeremie Jakubowicz, Jean-Michel Morel, and Gregory Randall,
-  Image Processing On Line, 2012. DOI:10.5201/ipol.2012.gjmr-lsd
-  http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd
-  
-  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
-  Copyright (c) 2007-2011 rafael grompone von gioi <grompone@gmail.com>
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as
-  published by the Free Software Foundation, either version 3 of the
-  License, or (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU Affero General Public License for more details.
-
-  You should have received a copy of the GNU Affero General Public License
-  along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-  ----------------------------------------------------------------------------*/
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file mulsd.cpp
+ * @brief muLSD: main interface
+ * @author Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+ *         Pascal Monasse <pascal.monasse@enpc.fr>
+ * @date 2016, 2023-2024
+ */
 
 #include "mulsd.hpp"
 #include "cluster.hpp"
@@ -118,7 +97,8 @@ void LineSegmentDetection(const Image<float>& im,
 /// In the image pyramid, the first one is the original image and subsequent
 /// are scaled-down versions of factor 2.
 /// When grad is zero, set it at standard deviation of gradient magnitude. 
-vector<Segment> lsd_multiscale(const vector<Image<float>*>& imgs, float grad) {
+std::vector<Segment> lsd_multiscale(const std::vector<Image<float>*>& imgs,
+                                    float grad) {
     vector<Segment> segments;
     for(int i=(int)imgs.size()-1; i>=0; i--) {
         cout <<"scale:" <<i <<" (" <<imgs[i]->w <<'x'<<imgs[i]->h <<")" <<flush;

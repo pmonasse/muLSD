@@ -1,26 +1,11 @@
-/*----------------------------------------------------------------------------  
-  This code is part of the following publication and was subject
-  to peer review:
-  "Multiscale line segment detector for robust and accurate SfM" by
-  Yohann Salaun, Renaud Marlet, and Pascal Monasse
-  ICPR 2016
-  
-  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the Mozilla Public License as
-  published by the Mozilla Foundation, either version 2.0 of the
-  License, or (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  Mozilla Public License for more details.
-  
-  You should have received a copy of the Mozilla Public License
-  along with this program. If not, see <https://www.mozilla.org/en-US/MPL/2.0/>.
-
-  ----------------------------------------------------------------------------*/
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file cluster.hpp
+ * @brief muLSD: clusters (segment candidates)
+ * @author Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+ *         Pascal Monasse <pascal.monasse@enpc.fr>
+ * @date 2016, 2023-2024
+ */
 
 #ifndef CLUSTER_HPP
 #define CLUSTER_HPP
@@ -32,7 +17,11 @@ extern "C" {
 #include <set>
 #include <vector>
 
-/// A Cluster stores information about a segment according to LSD: a rectangular
+typedef image_char   Cimage;
+typedef image_double Dimage;
+
+/** \brief Cluster=segment candidate. */
+/// A cluster stores information about a segment according to LSD: a rectangular
 /// section of image with pixels of coinciding gradient direction. This is
 /// associated with an NFA. Initially, the cluster is a connected set of pixels,
 /// issued from LSD. Afterwards, clusters can be merged. Finally, it is
@@ -46,19 +35,19 @@ class Cluster {
 
 public:
     Cluster() {} ///< The only sane behavior with this is to use operator= after
-    Cluster(image_double angles, image_double modgrad, double logNT,
+    Cluster(Dimage angles, Dimage modgrad, double logNT,
             const std::vector<point>& d, double t, double p, int idx);
-    Cluster(image_double angles, double logNT,
+    Cluster(Dimage angles, double logNT,
             const point* d, int dsize, rect& r, int idx);
 
     Cluster united(const std::vector<Cluster>& clusters,
                    const std::set<int>& indexToMerge,
-                   image_double angles, image_double modgrad,
+                   Dimage angles, Dimage modgrad,
                    double logNT) const;
 
     double length() const;
     Segment toSegment() const;
-    void setUsed(image_char& used) const;
+    void setUsed(CImage& used) const;
 
     const std::vector<point>& getPixels() const { return pixels; }
     const rect& rectangle() const { return rec; }
@@ -72,13 +61,13 @@ public:
 
 /// Compute the segments at current scale with information from previous scale.
 std::vector<Cluster> refineRawSegments(const std::vector<Segment>& rawSegments,
-                                       image_double angles,
-                                       image_double modgrad, image_char& used,
+                                       Dimage angles,
+                                       Dimage modgrad, Cimage& used,
                                        double logNT, double log_eps);
 
 /// Merge clusters at same scale that belong to the same line.
 void mergeClusters(std::vector<Cluster>& clusters,
-                   image_double angles, image_double modgrad, image_char& used,
+                   Dimage angles, Dimage modgrad, Cimage& used,
                    double logNT, double log_eps);
 
 #endif

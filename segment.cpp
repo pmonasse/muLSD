@@ -1,31 +1,15 @@
-/*----------------------------------------------------------------------------  
-  This code is part of the following publication and was subject
-  to peer review:
-  "Multiscale line segment detector for robust and accurate SfM" by
-  Yohann Salaun, Renaud Marlet, and Pascal Monasse
-  ICPR 2016
-  
-  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the Mozilla Public License as
-  published by the Mozilla Foundation, either version 2.0 of the
-  License, or (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  Mozilla Public License for more details.
-  
-  You should have received a copy of the Mozilla Public License
-  along with this program. If not, see <https://www.mozilla.org/en-US/MPL/2.0/>.
-
-  ----------------------------------------------------------------------------*/
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file segment.cpp
+ * @brief muLSD: segment
+ * @author Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+ * @date 2016, 2023-2024
+ */
 
 #include "segment.hpp"
 #include <cmath>  
 
-/// Constructor
+/// Constructor.
 Segment::Segment(double X1, double Y1, double X2, double Y2,
                  double w, double p, double nfa) {
     x1 = X1; y1 = Y1;
@@ -35,7 +19,7 @@ Segment::Segment(double X1, double Y1, double X2, double Y2,
     log_nfa = nfa;
 }
 
-// For multiscale LSD
+/// Upscale by a factor 2.
 Segment Segment::upscaled() const {
     Segment s = *this;
     s.x1 *= 2; s.y1 *= 2;
@@ -44,14 +28,17 @@ Segment Segment::upscaled() const {
     return s;
 }
 
+/// Length (in pixels) of the segment
 double Segment::length() const {
     return hypot(x1-x2,y1-y2);
 }
 
+/// Angle of segment with horizontal.
 double Segment::angle() const {
     return atan2(y2-y1, x2-x1);
 }
 
+/// Output segment.
 std::ostream& operator<<(std::ostream& str, const Segment& s) {
     str << s.x1 << "  " << s.y1 << "  " << s.x2 << "  " << s.y2 << " "
         << s.width << " " << s.prec << " " << s.log_nfa << '\n';

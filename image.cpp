@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file image.cpp
+ * @brief Elementary image class
+ * @author Robin Gay
+ *         Pascal Monasse <pascal.monasse@enpc.fr>
+ * @date 2021-2023
+ */
+
 #include "image.h"
 #include <cmath>
 #include <string>

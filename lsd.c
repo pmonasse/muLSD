@@ -35,7 +35,7 @@
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-/** @mainpage LSD code documentation
+/** LSD code documentation
 
     This is an implementation of the Line Segment Detector described
     in the paper:

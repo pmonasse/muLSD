@@ -1,33 +1,17 @@
-/*----------------------------------------------------------------------------  
-  This code is part of the following publication and was subject
-  to peer review:
-  "Multiscale line segment detector for robust and accurate SfM" by
-  Yohann Salaun, Renaud Marlet, and Pascal Monasse
-  ICPR 2016
-  
-  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the Mozilla Public License as
-  published by the Mozilla Foundation, either version 2.0 of the
-  License, or (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  Mozilla Public License for more details.
-  
-  You should have received a copy of the Mozilla Public License
-  along with this program. If not, see <https://www.mozilla.org/en-US/MPL/2.0/>.
-
-  ----------------------------------------------------------------------------*/
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file segment.hpp
+ * @brief muLSD: segment
+ * @author Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+ * @date 2016, 2023-2024
+ */
 
 #ifndef SEGMENT_HPP
 #define SEGMENT_HPP
 
 #include <iostream>
 
-// strucuture to keep track of segment detected
+/// Strucuture to keep track of detected segment.
 struct Segment{
     // segment coordinates
     double x1, y1, x2, y2;

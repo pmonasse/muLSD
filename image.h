@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * SPDX-License-Identifier: GPL-3.0-or-later
  * @file image.h
  * @brief Elementary image class
- *
- * Copyright (c) 2021-2022 Robin Gay, Pascal Monasse
+ * @author Robin Gay
+ *         Pascal Monasse <pascal.monasse@enpc.fr>
+ * @date 2021-2023
  */
 
 #ifndef IMAGE_H

@@ -1,26 +1,11 @@
-/*----------------------------------------------------------------------------  
-  This code is part of the following publication and was subject
-  to peer review:
-  "Multiscale line segment detector for robust and accurate SfM" by
-  Yohann Salaun, Renaud Marlet, and Pascal Monasse
-  ICPR 2016
-  
-  Copyright (c) 2016 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the Mozilla Public License as
-  published by the Mozilla Foundation, either version 2.0 of the
-  License, or (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  Mozilla Public License for more details.
-  
-  You should have received a copy of the Mozilla Public License
-  along with this program. If not, see <https://www.mozilla.org/en-US/MPL/2.0/>.
-
-  ----------------------------------------------------------------------------*/
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file cluster.cpp
+ * @brief muLSD: clusters (segment candidates)
+ * @author Yohann Salaun <yohann.salaun@imagine.enpc.fr>
+ *         Pascal Monasse <pascal.monasse@enpc.fr>
+ * @date 2016, 2023-2024
+ */
 
 #include "cluster.hpp"
 #include <queue>
@@ -28,9 +13,6 @@
 #include <numeric>
 #include <cmath>
 using namespace std;
-
-typedef image_char   Cimage;
-typedef image_double Dimage;
 
 /// Minimum number of pixels for a valid cluster
 static const int MIN_SIZE_CLUSTER=10;
@@ -40,12 +22,13 @@ static const int MIN_SIZE_CLUSTER=10;
 /// Create a cluster from a list of pixels. This constructor needs to find
 /// the enclosing rectangle.
 Cluster::Cluster(Dimage angles, Dimage modgrad, double logNT,
-                 const vector<point>& d, double t, double p, int idx)
+                 const std::vector<point>& d, double t, double p, int idx)
 : pixels(d), index(idx), merged(false) {
     region2rect(pixels.data(), (int)d.size(), modgrad, t, p, p/M_PI, &rec);
     nfa = rect_nfa(&rec, angles, logNT);
 }
 
+/// Create a cluster from a list of pixels.
 /// The rectangle containing the list of pixels is already known (after LSD).
 Cluster::Cluster(Dimage angles, double logNT,
                  const point* d, int dsize, rect& r, int idx)
@@ -64,7 +47,7 @@ Segment Cluster::toSegment() const {
                    rec.width, rec.p, nfa);
 }
 
-/// Mark in image /c used the footprint of the cluster (its pixels).
+/// Mark in image \c used the footprint of the cluster (its pixels).
 void Cluster::setUsed(Cimage& used) const {
     for(size_t j=0; j<pixels.size(); j++)
         used->data[pixels[j].x + pixels[j].y*used->xsize] = USED;
@@ -106,7 +89,7 @@ inline void operator+=(Point2d& p, const Point2d& q) {
 inline Point2d operator+(Point2d p, const Point2d& q) {
     p += q;
     return p;
-}
+} ///< Point+point -> point
 /// Point-vector -> point
 inline void operator-=(Point2d& p, const Point2d& q) {
     p.x -= q.x;
@@ -120,7 +103,7 @@ inline void operator-=(Point2d& p, const point& q) {
 inline Point2d operator-(Point2d p, const Point2d& q) {
     p -= q;
     return p;
-}
+} ///< Point - point -> point
 
 /// Scale \c p, considered as vector, by factor \a d.
 inline Point2d operator*(double d, const Point2d& p) {
@@ -172,7 +155,7 @@ public:
     bool operator()(int i, int j) const { return c[i].getNFA()<c[j].getNFA(); }
 };
 
-/// Region of interest: a rectangle inside the image.
+/** \brief Region of interest: a rectangle inside the image. */
 /// It is used to merge clusters within the rectangle.
 /// There are two constructors:
 /// 1. with a \a Segment: ROI is the rectangle defined by the segment.
@@ -224,7 +207,7 @@ public:
     ROI(const Segment& seg,       Dimage a, Dimage m, double lNT, Cimage used);
     ROI(const vector<Cluster>& c, Dimage a, Dimage m, double lNT);
 
-    bool isVoid() const { return clusters.empty(); }
+    bool isVoid() const { return clusters.empty(); } ///< No cluster found.
     void setUsed(Cimage& used);
     void mergeClusters(bool postLSD);
     bool filterClusters(vector<Cluster>& filtered, Cimage& used,
@@ -256,7 +239,7 @@ ROI::ROI(const Segment& rawSegment, Dimage a, Dimage m, double lNT, Cimage used)
 }
 
 /// Second constructor: the ROI is the full image, clusters already computed.
-/// Used in mergeClusters.
+/// Used in #mergeClusters.
 ROI::ROI(const vector<Cluster>& c, Dimage a, Dimage m, double lNT)
 : angles(a), modgrad(m), logNT(lNT) {
     width = (int)a->xsize;
