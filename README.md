@@ -1,93 +1,56 @@
-BEWARE: it seems that the code do not run well on Windows.
-I personnally tested it on Linux Mint (version > 16) 64 bits where it works fine.
+muLSD (a Multiscale Line Segment Detector done right)
+===
 
-=====================================
-MLSD (Multiscale Line Segment Detector)
-=====================================
-
-------------
-Introduction
-------------
-
-
-This code is linked of the following publication, which was subject to peer review:
-
-"Multiscale line segment detector for robust and accurate SfM" by Yohann Salaun, Renaud Marlet, and Pascal Monasse ICPR 2016
-
-It generalizes the classical LSD algorithm avoiding oversegmentation and bad detection on high quality picture.
-Its multiscale processing allow far better results for HQ images at a low/inexistant computation cost on most pictures.
-
-------------
-Building
-------------
-
-Requirement:
-
-- CMake (available for free at https://cmake.org/download/)
-
-- openCV (available for free at http://opencv.org/) > 2.x
-
-- C++ compiler
-
-We are currently trying to get rid of openCV for simplicity though it could be faster with it.
-
-------------
-Use
-------------
-
-The code works with the following arguments:
-
-- -d: directory path where the line files will be store in [IMG_NAME]_lines.txt and the corresponding pictures in DIRECTORY_PATH/pictures/[IMG_NAME]_lines.jpg
-(Note that you need to make the subdirectory pictures yourself, otherwise it won't store the pictures)
-- -i: input file of the form
-
-NB_OF_PICTURES
-
-IMG0_NAME IMG0_FULL_PATH
-
-IMG1_NAME IMG1_FULL_PATH
-
-...
-
-IMGn_NAME IMGn_FULL_PATH
-
-- (optionnally) -m: to enable(1)/disable(0) the multiscale mode (DEFAULT: enabled)
-
-- (optionnally) -t: threshold for segment detection in percentage of the image size (DEFAULT: 0)
-
-------------
-Use it in a Docker Container
-------------
-
-A Dockerfile is provided so you can use MLSD on whatever platform as long as you have docker installed.
-
-For instructions on using MLSD inside a docker container, please see ```docker/readme.md```.
-
-
-------------
-License
-------------
-
-[MPL2](https://github.com/ySalaun/MLSD/edit/master/LICENSE.mlsd) for MLSD
-
-AGPL for LSD
-
-------------
 Authors
-------------
-
+---
+Pascal Monasse <pascal.monasse@enpc.fr>,
 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
 
-Renaud Marlet <renaud.marlet@enpc.fr>
+Introduction
+---
+This code implements a multi-scale line segment detector, called muLSD. This is an extension of LSD [1] yielding better results when applied to large images. Such an extension, called MLSD, was already performed in [2], and implemented in [3]. However, this was flawed and the current one is based on the same ideas but fixes several problems.
 
-Pascal Monasse <pascal.monasse@enpc.fr>
+Building
+---
+*Requirements:*
 
-------------
+  - CMake (available at https://cmake.org/download/)
+  - C++ compiler
+
+*Build instructions:*
+
+- Unix, MacOS:
+  ```
+  $ cd /path_to_this_file/
+  $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
+  $ cmake --build .
+  ```
+- Windows with MinGW:
+  ```
+  $ cd /path_to_this_file/
+  $ mkdir Build 
+  $ cd Build
+  $ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release ..
+  $ cmake --build .
+  ```
+
+Usage
+---
+```
+./muLSD [options] imgIn.png out.txt
+-s, --scales=ARG nb scales (0=automatic) (0)
+-g, --gradient=ARG Min gradient norm (0=automatic) (0)
+```
+Options:
+
+- -s: 1=single-scale, 2=single scale and half-scale, etc. 0=automatic.
+- -g: 0 means the threshold is based on standard deviation of gradient norm.
+
 Citations
-------------
+---
+[1] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, 2 (2012), pp. 35–55. (http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd)
 
-If you used our code in your publication, please cite the following:
+[2] Yohann Salaün, Renaud Marlet, and Pascal Monasse, Multiscale line segment detector for robust and accurate SfM, Procedings of ICPR 2016. (https://doi.org/10.1109/ICPR.2016.7899930)
 
-[1] Yohann Salaun, Renaud Marlet, and Pascal Monasse, [Multiscale line segment detector for robust and accurate SfM](https://drive.google.com/file/d/0B96kyL2SBsmzOFY0b2hnSm54eTQ/view),  ICPR 2016
+[3] Yohann Salaün, Renaud Marlet, and Pascal Monasse, The multiscale line segment detector, Proceedings of RRPR 2016. (https://doi.org/10.1007/978-3-319-56414-2_12)
 
-[2] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, 2 (2012), pp. 35–55. http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd
