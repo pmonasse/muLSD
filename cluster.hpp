@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 /**
  * @file cluster.hpp
  * @brief muLSD: clusters (segment candidates)
@@ -47,7 +47,7 @@ public:
 
     double length() const;
     Segment toSegment() const;
-    void setUsed(CImage& used) const;
+    void setUsed(Cimage& used) const;
 
     const std::vector<point>& getPixels() const { return pixels; }
     const rect& rectangle() const { return rec; }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 /**
  * @file main.cpp
  * @brief muLSD: multiscale Line Segment Detector
@@ -17,9 +17,9 @@ using namespace std;
 /// With pictures of less than 1Mpx, the original LSD detector performs well.
 int nbScales(int w, int h){
     int n = 1;
-    int maxWH = max(w,h);
-    while(maxWH > 500){
-        maxWH /= 2;
+    int minWH=min(w,h), maxWH=max(w,h);
+    while(minWH > 100 && maxWH > 500){
+        minWH /= 2; maxWH /= 2;
         n++;
     }
     return n;

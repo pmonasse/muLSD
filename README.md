@@ -53,4 +53,3 @@ Citations
 [2] Yohann Salaün, Renaud Marlet, and Pascal Monasse, Multiscale line segment detector for robust and accurate SfM, Procedings of ICPR 2016. (https://doi.org/10.1109/ICPR.2016.7899930)
 
 [3] Yohann Salaün, Renaud Marlet, and Pascal Monasse, The multiscale line segment detector, Proceedings of RRPR 2016. (https://doi.org/10.1007/978-3-319-56414-2_12)
-
