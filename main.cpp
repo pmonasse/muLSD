@@ -15,7 +15,7 @@ using namespace std;
 
 /// Adapt number of scales to the resolution of the picture.
 /// With pictures of less than 1Mpx, the original LSD detector performs well.
-int nbScales(int w, int h){
+int nbScales(int w, int h) {
     int n = 1;
     int minWH=min(w,h), maxWH=max(w,h);
     while(minWH > 100 && maxWH > 500){
@@ -23,6 +23,21 @@ int nbScales(int w, int h){
         n++;
     }
     return n;
+}
+
+/// Check the required number of scales is reachable. If one image dimension
+/// becomes too small, we cannot convolve sufficiently and prefer to fail.
+/// On failure, return in \a n the maximum number of scales.
+bool checkNbScales(int& n, int w, int h) {
+    w = min(w,h);
+    int i=0;
+    for(; i<n && w>=6; i++)
+        w /= 2;
+    if(i<n) {
+        n=max(1,i);
+        return false;
+    }
+    return true;
 }
 
 void saveLines(const std::vector<Segment> &lines, const char* name) {
@@ -36,6 +51,7 @@ void saveLines(const std::vector<Segment> &lines, const char* name) {
   * muLSD is a multiscale line segment detector done right. It fixes
   * the defects of MLSD (Salaun, Marlet, Monasse), a variant of LSD
   * (Grompone von Gioi, Jakubowicz, Morel, Randall). */
+/// muLSD. Options: -s #scales, -g minGrad.
 int main(int argc, char* argv[]) { 
     // parse arguments
     CmdLine cmd;
@@ -70,6 +86,10 @@ int main(int argc, char* argv[]) {
 
     if(nScales==0)
         nScales = nbScales(im.w, im.h);
+    if(! checkNbScales(nScales, im.w, im.h)) {
+        std::cerr << "Max #scales for image size: " << nScales << std::endl;
+        return 1;
+    }
     vector<Image<float>*> imagePyramid = gaussPyramid(im, nScales);
 
     vector<Segment> segments = lsd_multiscale(imagePyramid, grad);
