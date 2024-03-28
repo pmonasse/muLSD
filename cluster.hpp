@@ -52,6 +52,7 @@ public:
     const std::vector<point>& getPixels() const { return pixels; }
     const rect& rectangle() const { return rec; }
     double getTheta() const { return rec.theta; }
+    double getWidth() const { return rec.width; }
     double getNFA() const { return nfa; }
     int getIndex() const { return index; }
     void setIndex(int i) { index=i; }

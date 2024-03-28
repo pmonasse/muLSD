@@ -15,7 +15,9 @@
 using namespace std;
 
 /// Minimum number of pixels for a valid cluster
-static const int MIN_SIZE_CLUSTER=10;
+const int MIN_SIZE_CLUSTER=10;
+/// Maximum width of segment when upscaling
+const double MAX_WIDTH_UPSCALE=10.0;
 
 // --- Cluster class ---
 
@@ -133,7 +135,7 @@ static bool insideRect(Point2d p1, Point2d p2,
 /// Get center of rectangle: weigthed centroid of pixels in the cluster.
 static Point2d getCenter(const Cluster& c) {
     const rect& r = c.rectangle();
-    return Point2d(r.x,r.y);
+    return Point2d(.5f*(r.x1+r.x2),.5f*(r.y1+r.y2));
 }
 
 /// Vector for sampling points along the rectangle direction. It has a step
@@ -348,7 +350,7 @@ set<int> ROI::findIntersect(const Cluster& c, bool postLSD) const {
     const double theta = c.getTheta();
     const double len  = c.length();
     const int cidx = c.getIndex();
-    const double prec = 1.0/len;
+    const double prec = c.getWidth()/len;
 
     for(int s=-1; s<=1; s += 2) { // Both directions
         const Point2d signed_step = s*step;
@@ -466,6 +468,7 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
     vector<Cluster> clusters;
     for(size_t i=0; i<rawSegments.size(); i++) {
         Segment seg = rawSegments[i].upscaled();
+        seg.width = min(seg.width, MAX_WIDTH_UPSCALE);
         ROI roi(seg, angles, modgrad, logNT, used); // Constructor with segment
         if (roi.isVoid())
             continue;
