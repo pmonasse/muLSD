@@ -42,7 +42,6 @@ bool checkNbScales(int& n, int w, int h) {
 
 void saveLines(const std::vector<Segment> &lines, const char* name) {
     ofstream linesTxt(name, ofstream::out);
-    linesTxt << lines.size() << endl;
     for (size_t i=0; i<lines.size(); i++)
         linesTxt << lines[i];
 }
