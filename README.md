@@ -1,13 +1,12 @@
 ## muLSD (a Multiscale Line Segment Detector done right)
 
-
 ### Authors
 Pascal Monasse <pascal.monasse@enpc.fr>,
+Rahima Djahel <rdjahel@gmail.com>,
 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
 
 ### Introduction
-
-This code implements a multi-scale line segment detector, called muLSD. This is an extension of LSD [1][1] yielding better results when applied to large images. Such an extension, called MLSD, was already performed in [2][2], and implemented in [3][3]. However, this was flawed and the current one is based on the same ideas but fixes several problems.
+This code implements a multi-scale line segment detector, called muLSD. This is an extension of LSD [1][^1] yielding better results when applied to large images. Such an extension, called MLSD, was already performed in [2][^2], and implemented in [3][^3]. However, this was flawed and the current one is based on the same ideas but fixes several problems.
 
 ### Building
 *Requirements:*
@@ -20,21 +19,19 @@ This code implements a multi-scale line segment detector, called muLSD. This is 
 - Unix, MacOS:
   ```
   $ cd /path_to_this_file/
-  $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
-  $ cmake --build .
+  $ cmake -DCMAKE_BUILD_TYPE:bool=Release -S . -B Build
+  $ cmake --build Build
   ```
 - Windows with MinGW:
   ```
   $ cd /path_to_this_file/
-  $ mkdir Build 
-  $ cd Build
-  $ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release ..
-  $ cmake --build .
+  $ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release S . -B Build
+  $ cmake --build Build
   ```
 
 ### Usage
 ```
-./muLSD [options] imgIn.png out.txt
+Build/muLSD [options] imgIn.png out.txt
 -s, --scales=ARG nb scales (0=automatic) (0)
 -g, --gradient=ARG Min gradient norm (0=automatic) (0)
 ```
@@ -45,13 +42,12 @@ Options:
 
 Example:
 ```
-./muLSD ../data/grid.png grid.txt
+Build/muLSD data/grid.png grid.txt
 ```
-Generated file `grid.txt` must coincide with reference `../data/grid_lines.txt`.
+Generated file `grid.txt` must coincide with reference `data/grid_lines.txt`.
 
-### Citations
-[1]: Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, 2 (2012), pp. 35–55. <http://doi.org/10.5201/ipol.2012.gjmr-lsd>
+[^1]: Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, 2 (2012), pp. 35–55. <http://doi.org/10.5201/ipol.2012.gjmr-lsd>
 
-[2]: Yohann Salaün, Renaud Marlet, and Pascal Monasse, Multiscale line segment detector for robust and accurate SfM, Procedings of ICPR 2016. <https://doi.org/10.1109/ICPR.2016.7899930>
+[^2]: Yohann Salaün, Renaud Marlet, and Pascal Monasse, Multiscale line segment detector for robust and accurate SfM, Procedings of ICPR 2016. <https://doi.org/10.1109/ICPR.2016.7899930>
 
-[3]: Yohann Salaün, Renaud Marlet, and Pascal Monasse, The multiscale line segment detector, Proceedings of RRPR 2016. <https://doi.org/10.1007/978-3-319-56414-2_12>
+[^3]: Yohann Salaün, Renaud Marlet, and Pascal Monasse, The multiscale line segment detector, Proceedings of RRPR 2016. <https://doi.org/10.1007/978-3-319-56414-2_12>
