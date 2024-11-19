@@ -1,22 +1,28 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13)
 project(MLSD)
 
 find_package(PNG)
-if(PNG_FOUND)
-  add_definitions(${PNG_DEFINITIONS})
-else(PNG_FOUND)
-  # zlib is needed by libPNG
-  find_package(ZLIB)
+if(NOT PNG_FOUND)
+  find_package(ZLIB) # zlib is needed by libPNG
   if(NOT ZLIB_FOUND)
-    add_subdirectory(third_party/zlib-1.2.12)
-    set(ZLIB_LIBRARY ${ZLIB_LIBRARIES})
-  endif(NOT ZLIB_FOUND)
-  include_directories(${ZLIB_INCLUDE_DIRS})
+        set(ZLIB_BUILD_EXAMPLES OFF)
+        add_subdirectory(third_party/zlib-1.3.1)
+        set(ZLIB_FOUND TRUE)
+        set(PNG_BUILD_ZLIB ON)
+        set_target_properties(${ZLIB_LIBRARIES} PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
+        add_library(ZLIB::ZLIB ALIAS "${ZLIB_LIBRARIES}")
+  endif()
 
+  set(PNG_SHARED OFF)
+  set(PNG_TESTS OFF)
+  set(PNG_TOOLS OFF)
   set(SKIP_INSTALL_ALL 1)
-  add_subdirectory(third_party/libpng-1.6.37)
-endif(PNG_FOUND)
-include_directories(${PNG_INCLUDE_DIRS})
+  add_subdirectory(third_party/libpng-1.6.44)
+  set_target_properties(${PNG_LIBRARIES} PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${PNG_INCLUDE_DIRS}")
+  add_library(PNG::PNG ALIAS "${PNG_LIBRARIES}")
+endif()
 
 set(LINE_DETECTION
   lsd.c lsd.h
@@ -31,12 +37,13 @@ add_executable(muLSD ${LINE_DETECTION}
   cmdLine.h
   main.cpp)
 
-target_compile_options(muLSD PRIVATE -Wall -Wextra)
-target_link_libraries(muLSD PRIVATE ${PNG_LIBRARIES})
+target_link_libraries(muLSD PRIVATE PNG::PNG)
 
 add_executable(test_pyramid
   test_pyramid.cpp cmdLine.h io_png.h io_png.c image.h image.cpp)
-target_compile_options(test_pyramid PRIVATE -Wall -Wextra)
-target_link_libraries(test_pyramid PRIVATE ${PNG_LIBRARIES})
+target_link_libraries(test_pyramid PRIVATE PNG::PNG)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU)|(CLANG)")
+  set_target_properties(muLSD PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
+  set_target_properties(test_pyramid PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
+endif()
