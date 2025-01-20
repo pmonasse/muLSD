@@ -79,6 +79,7 @@ struct Point2d {
     double y;
     Point2d(double X, double Y): x(X), y(Y) {}
     Point2d() {}
+    double length() const { return hypot(x,y); }
 };
 
 // Various operators for compact geometric constructions.
@@ -107,7 +108,7 @@ inline Point2d operator-(Point2d p, const Point2d& q) {
     return p;
 } ///< Point - point -> point
 
-/// Scale \c p, considered as vector, by factor \a d.
+/// Scale \a p, considered as vector, by factor \a d.
 inline Point2d operator*(double d, const Point2d& p) {
     return Point2d(d*p.x, d*p.y);
 }
@@ -150,6 +151,14 @@ static Point2d getSlope(const Cluster& c) {
 // --- ROI class ---
 
 // Functor to sort clusters by decreasing NFA value.
+class CompareSegments {
+    const vector<Segment>& s;
+public:
+    CompareSegments(const vector<Segment>& v): s(v) {}
+    bool operator()(int i, int j) const { return s[i].log_nfa > s[j].log_nfa; }
+};
+
+// Functor to sort clusters by NFA value.
 class CompareClusters {
     const vector<Cluster>& c;
 public:
@@ -211,19 +220,13 @@ public:
 
     bool isVoid() const { return clusters.empty(); } ///< No cluster found.
     void setUsed(Cimage& used);
+    void setUsedOutside(Cimage& used);
     void mergeClusters(bool postLSD);
     bool filterClusters(vector<Cluster>& filtered, Cimage& used,
                         double log_eps);
 };
 
 const int ROI::CLUSTER_NULL=-1;
-
-/// Mark pixels as used in global image. This prevents multiple detections of
-/// the same cluster.
-void ROI::setUsed(Cimage& used) {
-    for(size_t i=0; i<definedPixels.size(); i++)
-        used->data[definedPixels[i]] = USED;
-}
 
 /// First constructor: a single segment (from previous scale).
 /// Called in #refineRawSegments for merging clusters inside a rectangle.
@@ -334,6 +337,45 @@ void ROI::aggregatePixels(const vector<point>& alignedPixels) {
         else
             clusters.push_back(Cluster(angles, modgrad, logNT, data, theta,
                                        prec, clusters.size()));
+    }
+}
+
+/// Mark pixels as used in global image. This prevents multiple detections of
+/// the same cluster.
+void ROI::setUsed(Cimage& used) {
+    for(size_t i=0; i<definedPixels.size(); i++)
+        used->data[definedPixels[i]] = USED;
+}
+
+/// In the ROI dilated by width/2, forbid usage of points of aligned angle.
+/// At each boundary point along length, go outward until meeting the first
+/// angle within width/2. If the angle is not aligned, stop, otherwise disable
+/// the point and coninue going.
+void ROI::setUsedOutside(Cimage& used) {
+    Point2d u = q1-p1;
+    double len = u.length(), w=(p2-p1).length()/2;
+    u = (1.0/len)*u;
+    Point2d v = orthogonal(u), p=p1;
+    for(int i=0; i<2; i++) { // Two sides along length
+        for(double x=0; x<len; x++) {
+            for(double y=0; y<w; y++) {
+                Point2d q = p + x*u + y*v;
+                int X = (int)round(q.x), Y = (int)round(q.y);
+                if(X<0 || (unsigned)X>=angles->xsize ||
+                   Y<0 || (unsigned)Y>=angles->ysize)
+                    continue;
+                int j=X+Y*angles->xsize;
+                double alpha = angles->data[j];
+                if(alpha == NOTDEF)
+                    continue;
+                if(angle_diff(alpha,theta)>prec)
+                    break;
+                used->data[j] = USED;
+            }
+        }
+        // Prepare for other side
+        p = p2;
+        v = (-1.0)*v;
     }
 }
 
@@ -466,14 +508,20 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
                                   Cimage& used,
                                   double logNT, double log_eps) {
     vector<Cluster> clusters;
-    for(size_t i=0; i<rawSegments.size(); i++) {
-        Segment seg = rawSegments[i].upscaled();
+    CompareSegments cmp(rawSegments);
+    vector<int> v(rawSegments.size());
+    std::iota(v.begin(), v.end(), 0);
+    std::sort(v.begin(), v.end(), cmp);
+    for(std::vector<int>::const_iterator it=v.begin(); it!=v.end(); ++it) {
+        Segment seg = rawSegments[*it].upscaled();
         seg.width = min(seg.width, MAX_WIDTH_UPSCALE);
         ROI roi(seg, angles, modgrad, logNT, used); // Constructor with segment
         if (roi.isVoid())
             continue;
         roi.mergeClusters(false);
-        if(! roi.filterClusters(clusters, used, log_eps))
+        if(roi.filterClusters(clusters, used, log_eps))
+            roi.setUsedOutside(used);
+        else
             roi.setUsed(used); // Tag pixels inside to prevent detection by LSD
     }
     return clusters;
