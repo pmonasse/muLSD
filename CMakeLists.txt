@@ -43,7 +43,10 @@ add_executable(test_pyramid
   test_pyramid.cpp cmdLine.h io_png.h io_png.c image.h image.cpp)
 target_link_libraries(test_pyramid PRIVATE PNG::PNG)
 
+add_executable(compare_lines compare_lines.cpp)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU)|(CLANG)")
   set_target_properties(muLSD PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
   set_target_properties(test_pyramid PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
+  set_target_properties(compare_lines PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
 endif()
