@@ -288,7 +288,7 @@ void ROI::findAlignedPixels(vector<point>& alignedPixels, Cimage used) {
         for(p.x=xMin; p.x<=xMax; p.x++)
             if(insideRect(p1, p2, q1, q2, p)) {
                 int i = p.x + p.y*angles->xsize;
-                if(used->data[i] == NOTUSED && angles->data[i] != NOTDEF) {
+                if(used->data[i] != USED && angles->data[i] != NOTDEF) {
                     definedPixels.push_back(i);
                     if(angle_diff(angles->data[i], theta) < prec) {
                         alignedPixels.push_back(p);
@@ -307,8 +307,8 @@ vector<point> ROI::findCC(point seed, int idx) {
     for(size_t i=0; i<data.size(); ++i) {
         seed = data[i];
         // look inside 8-neighbourhood
-        for (int dx=-1; dx<=1; dx++)
-            for (int dy=-1; dy<=1; dy++) {
+        for(int dx=-1; dx<=1; dx++)
+            for(int dy=-1; dy<=1; dy++) {
                 if(dx==0 && dy==0) continue;
                 point p = {seed.x + dx, seed.y + dy};
                 int j = pixelToIndex(p);
@@ -406,9 +406,9 @@ set<int> ROI::findIntersect(const Cluster& c, bool postLSD) const {
                 if(postLSD &&
                    (angle_diff(clusters[idx].getTheta(),theta)>prec ||
                     c.getNFA() < clusters[idx].getNFA()))
-                    break;
+                    break; // Stop search in current direction
                 inter.insert(idx);
-                if(postLSD) break;
+                if(postLSD) break; // Stop search in current direction
             }
         }
     }
@@ -422,10 +422,10 @@ set<int> ROI::findIntersect(const Cluster& c, bool postLSD) const {
 /// If successful (return value \c true), \a c and the clusters referred in
 /// \a inter are marked as merged and the pixel positions get the new index.
 bool ROI::mergeCluster(Cluster& c, const set<int>& inter, Cluster& merged) {
-    set<int>::const_iterator it=inter.begin(), end=inter.end();
     merged = c.united(clusters, inter, angles, modgrad, logNT);
     if(merged.getNFA() <= c.getNFA())
         return false;
+    set<int>::const_iterator it, end=inter.end();
     for(it=inter.begin(); it!=end; ++it)
         if(merged.getNFA()<=clusters[*it].getNFA())
             return false;
@@ -435,7 +435,7 @@ bool ROI::mergeCluster(Cluster& c, const set<int>& inter, Cluster& merged) {
     for(it=inter.begin(); it!=end; ++it)
         clusters[*it].setMerged();
     // labelize clustered points with their new label
-    for (size_t j=0; j<merged.getPixels().size(); j++) {
+    for(size_t j=0; j<merged.getPixels().size(); j++) {
         const point& p = merged.getPixels()[j];
         if(inBB(p)) // due to width reduction, there can be some issue
             pixelCluster[pixelToIndex(p)] = merged.getIndex();
@@ -486,7 +486,7 @@ void ROI::mergeClusters(bool postLSD) {
 bool ROI::filterClusters(vector<Cluster>& filtered, Cimage& used,
                          double log_eps) {
     bool adding=false;
-    for (size_t i=0; i<clusters.size(); i++) {
+    for(size_t i=0; i<clusters.size(); i++) {
         if(clusters[i].isMerged() || clusters[i].getNFA() <= log_eps)
             continue;
         adding = true;
@@ -516,7 +516,7 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
         Segment seg = rawSegments[*it].upscaled();
         seg.width = min(seg.width, MAX_WIDTH_UPSCALE);
         ROI roi(seg, angles, modgrad, logNT, used); // Constructor with segment
-        if (roi.isVoid())
+        if(roi.isVoid())
             continue;
         roi.mergeClusters(false);
         if(roi.filterClusters(clusters, used, log_eps))
