@@ -1,6 +1,6 @@
 # Prerequisite Unix tools: ls, wc, echo, cut, bc
-LSD ?= ../build/muLSD
-COMPARE ?= ../build/compare_lines
+LSD ?= ../Build/muLSD
+COMPARE ?= ../Build/compare_lines
 
 # LSD expects .pgm as input, replace if needed
 EXT ?= png
@@ -8,8 +8,10 @@ EXT ?= png
 all : eval
 
 # Use ImageMagick to convert to png image, if needed
+ifneq ($(EXT),png)
 %.png : %.$(EXT)
 	magick $< $@
+endif
 
 .PRECIOUS : %_seg.txt
 IMG = $(wildcard *.$(EXT))
