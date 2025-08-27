@@ -48,8 +48,10 @@ std::vector<Seg> read_seg(const char* file) {
         std::istringstream is(str);
         Seg s;
         is >> s;
-        if(is.fail() && !F.eof()) {
-            ++ignored;
+        if(is.fail()) {
+            if(!str.empty() && // Don't report blank lines
+               str.find_first_not_of(" \t\n\v\f\r")!=std::string::npos)
+                ++ignored;
         } else
             V.push_back(s);
     }
@@ -138,9 +140,8 @@ int main(int argc, char* argv[]) {
     }
     float p=tp; if(tp+fp>0) p /= (tp+fp);
     float r=tp; if(tp+fn>0) r /= (tp+fn);
+    float f1=(p*r==0)? 0: 2*(p*r)/(p+r);
     float iou = fpIOU>0? tpIOU/fpIOU: 0;
-    std::cout << "Prec,Rec,F1,IOU= "
-              << p << ' ' << r << ' ' << 2*(p*r)/(p+r) << ' '
-              << iou << std::endl;
+    std::cout << "Prec,Rec,F1,IOU= " << p<<' '<<r<<' '<<f1<<' '<<iou<<std::endl;
     return 0;
 }
