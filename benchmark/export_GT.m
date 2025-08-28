@@ -1,8 +1,6 @@
-folders = dir('P*');
-for i = 1:length(folders)
-  n = folders(i).name;
-  load([n,'/',n,'LinesAndVP.mat']);
-  r = lines';
-  r = reshape(r(:),4,[])';
-  dlmwrite([n,'_gt.txt'],r,' ');
+files=dir('P*_GND.mat');
+for i = 1:length(files)
+    n = files(i).name;
+    load(n);
+    dlmwrite([n(1:8),'_gt.txt'],line_gnd,' ');
 end

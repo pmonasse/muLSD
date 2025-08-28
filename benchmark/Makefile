@@ -5,23 +5,26 @@ COMPARE ?= ../Build/compare_lines
 # LSD expects .pgm as input, replace if needed
 EXT ?= png
 
+# Database for test: all images with extension EXT0
+EXT0 = jpg
+DB = $(wildcard *.$(EXT0))
+
 all : eval
 
-# Use ImageMagick to convert to png image, if needed
-ifneq ($(EXT),png)
-%.png : %.$(EXT)
+# Use ImageMagick to convert to required format, if needed
+ifneq ($(EXT),$(EXT0))
+%.$(EXT) : %.$(EXT0)
 	magick $< $@
 endif
 
 .PRECIOUS : %_seg.txt
-IMG = $(wildcard *.$(EXT))
 %_seg.txt : %.$(EXT)
 	$(LSD) $< $@
 
 %_eval.txt : %_seg.txt
 	$(COMPARE) $< $(subst seg,gt,$<) > $@
 
-eval : $(subst .$(EXT),_eval.txt,$(IMG))
+eval : $(subst .$(EXT0),_eval.txt,$(DB))
 	echo Based on $(shell ls *_eval.txt |wc -l) images:
 
 	echo -n \(0 > dummy.txt
