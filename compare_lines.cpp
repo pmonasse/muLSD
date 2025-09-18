@@ -76,7 +76,7 @@ float perp_dist(const Seg& s1, const Seg& s2, float c, float s) {
 float angle_diff(float angle1, float angle2) {
     angle1 = mod_pi(angle1), angle2=mod_pi(angle2);
     float d = std::abs(angle1-angle2);
-    if(d>M_PI/2) d-=M_PI/2;
+    if(d>M_PI/2) d = M_PI-d;
     return d;
 }
 
