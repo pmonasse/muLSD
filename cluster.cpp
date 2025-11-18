@@ -403,10 +403,13 @@ set<int> ROI::findIntersect(const Cluster& c, bool postLSD) const {
 
             int idx = pixelCluster[pixelToIndex(X,Y)];
             if(idx!=NOTDEF && idx!=cidx && !clusters[idx].isMerged()) {
-                if(postLSD &&
-                   (angle_diff(clusters[idx].getTheta(),theta)>prec ||
-                    c.getNFA() < clusters[idx].getNFA()))
-                    break; // Stop search in current direction
+                if(postLSD) {
+                    double prec2 = std::max(prec,
+                        clusters[idx].getWidth()/clusters[idx].length());
+                    if(angle_diff(clusters[idx].getTheta(),theta)>prec2 ||
+                       c.getNFA() < clusters[idx].getNFA())
+                        break; // Stop search in current direction
+                }
                 inter.insert(idx);
                 if(postLSD) break; // Stop search in current direction
             }
