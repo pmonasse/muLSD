@@ -208,14 +208,14 @@ class ROI {
     }
     
     void computeRectangle(const Segment& rawSegment);
-    void findAlignedPixels(vector<point>& alignedPixels, Cimage used);
+    void findAlignedPixels(vector<point>& alignedPixels);
     vector<point> findCC(point seed, int idx);
     void aggregatePixels(const vector<point>& alignedPixels);
 
     set<int> findIntersect(const Cluster& c, bool postLSD) const;
     bool mergeCluster(Cluster& c, const set<int>& inter, Cluster& merged);
 public:
-    ROI(const Segment& seg,       Dimage a, Dimage m, double lNT, Cimage used);
+    ROI(const Segment& seg,       Dimage a, Dimage m, double lNT);
     ROI(const vector<Cluster>& c, Dimage a, Dimage m, double lNT);
 
     bool isVoid() const { return clusters.empty(); } ///< No cluster found.
@@ -230,7 +230,7 @@ const int ROI::CLUSTER_NULL=-1;
 
 /// First constructor: a single segment (from previous scale).
 /// Called in #refineRawSegments for merging clusters inside a rectangle.
-ROI::ROI(const Segment& rawSegment, Dimage a, Dimage m, double lNT, Cimage used)
+ROI::ROI(const Segment& rawSegment, Dimage a, Dimage m, double lNT)
 : angles(a), modgrad(m), logNT(lNT) {
     // gradient parameters
     theta = rawSegment.angle();
@@ -239,7 +239,7 @@ ROI::ROI(const Segment& rawSegment, Dimage a, Dimage m, double lNT, Cimage used)
     computeRectangle(rawSegment);
     pixelCluster = vector<int>(sizeBB(), NOTDEF);
     vector<point> alignedPixels;
-    findAlignedPixels(alignedPixels, used);
+    findAlignedPixels(alignedPixels);
     aggregatePixels(alignedPixels);
 }
 
@@ -281,14 +281,12 @@ void ROI::computeRectangle(const Segment& seg) {
 /// Insert in \a alignedPixels the pixels inside the ROI whose gradient
 /// direction is aligned. Pixels inside the ROI with non-null gradient
 /// are registered in field \a definedPixels.
-/// As different ROI may overlap, some pixels may have been already used in a
-/// previous ROI (checked with image \a used); they are then skipped here.
-void ROI::findAlignedPixels(vector<point>& alignedPixels, Cimage used) {
+void ROI::findAlignedPixels(vector<point>& alignedPixels) {
     for(point p = {xMin,yMin}; p.y<=yMax; p.y++)
         for(p.x=xMin; p.x<=xMax; p.x++)
             if(insideRect(p1, p2, q1, q2, p)) {
                 int i = p.x + p.y*angles->xsize;
-                if(used->data[i] != USED && angles->data[i] != NOTDEF) {
+                if(angles->data[i] != NOTDEF) {
                     definedPixels.push_back(i);
                     if(angle_diff(angles->data[i], theta) < prec) {
                         alignedPixels.push_back(p);
@@ -518,7 +516,7 @@ vector<Cluster> refineRawSegments(const vector<Segment>& rawSegments,
     for(std::vector<int>::const_iterator it=v.begin(); it!=v.end(); ++it) {
         Segment seg = rawSegments[*it].upscaled();
         seg.width = min(seg.width, MAX_WIDTH_UPSCALE);
-        ROI roi(seg, angles, modgrad, logNT, used); // Constructor with segment
+        ROI roi(seg, angles, modgrad, logNT); // Constructor with segment
         if(roi.isVoid())
             continue;
         roi.mergeClusters(false);
