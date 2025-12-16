@@ -160,19 +160,20 @@ bool eval_seg(const Seg& sGT, const std::vector<Seg>& D, const Param& param,
         float x2, x3;
         project(sGT, *it, dx, dy, x2, x3);
         float over = overlap(x0, x1, x2, x3);
-        if(over > 0) {
+        if(over <= 0)
+            continue;
+        float l=sGT.l, L=it->l; if(l>L) std::swap(l,L); // min/max lengths
+        if(over >= param.overlap * L && l >= param.overlap * over) {
             hit=true;
-            if(over >= param.overlap * sGT.l && sGT.l >= param.overlap * over) {
-                match[i] = true;
-                if(x2<m) m=x2;
-                if(x3>M) M=x3;
-                if(x2<x0) x2=x0;
-                if(x3>x1) x3=x1;
-                U.insert(x2,x3);
-                tp += it->l;
-            } else
-                fp += it->l;
-        }
+            match[i] = true;
+            if(x2<m) m=x2;
+            if(x3>M) M=x3;
+            if(x2<x0) x2=x0;
+            if(x3>x1) x3=x1;
+            U.insert(x2,x3);
+            tp += it->l;
+        } else
+            fp += it->l;
     }
     inter += U.length();
     uni += M-m;
