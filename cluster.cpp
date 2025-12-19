@@ -4,7 +4,7 @@
  * @brief muLSD: clusters (segment candidates)
  * @author Yohann Salaun <yohann.salaun@imagine.enpc.fr>
  *         Pascal Monasse <pascal.monasse@enpc.fr>
- * @date 2016, 2023-2024
+ * @date 2016, 2023-2025
  */
 
 #include "cluster.hpp"
