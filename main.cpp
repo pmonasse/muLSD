@@ -10,6 +10,7 @@
 #include "mulsd.hpp"
 #include "cmdLine.h"
 #include <fstream>
+#include <ctime>
 
 using namespace std;
 
