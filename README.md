@@ -6,7 +6,7 @@ Rahima Djahel <rdjahel@gmail.com>,
 Yohann Salaun <yohann.salaun@imagine.enpc.fr>
 
 ### Introduction
-This code implements a multi-scale line segment detector, called muLSD. This is an extension of LSD [1][^1] yielding better results when applied to large images. Such an extension, called MLSD, was already performed in [2][^2], and implemented in [3][^3]. However, this was flawed and the current one is based on the same ideas but fixes several problems.
+This code implements a multi-scale line segment detector, called muLSD. This is an extension of LSD[^1] yielding better results when applied to large images. Such an extension, called MLSD, was already performed in [^2], and implemented in [^3]. However, this was flawed and the current one is based on the same ideas but fixes several problems.
 
 ### Building
 *Requirements:*
