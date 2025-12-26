@@ -70,8 +70,9 @@ void draw_line(const Seg& s, unsigned char* im, int w, int) {
     int o = (delta[0]>=delta[1])? 0: 1;
     int plus=2*delta[1-o], sub=plus-delta[o], minus=sub-delta[o];
     while(p[o]!=q[o]) {
-        for(int j=0; j<4; j++)
-            im[4*(p[0]+p[1]*w)+j] = col[j];
+        if(p[0]>=0 && p[1]>=0)
+            for(int j=0; j<4; j++)
+                im[4*(p[0]+p[1]*w)+j] = col[j];
         p[o] += d[o];
         if(sub<=0)
             sub += plus;
@@ -80,8 +81,9 @@ void draw_line(const Seg& s, unsigned char* im, int w, int) {
             p[1-o] += d[1-o];
         }
     }
-    for(int j=0; j<4; j++)
-        im[4*(p[0]+p[1]*w)+j] = col[j];
+    if(p[0]>=0 && p[1]>=0)
+        for(int j=0; j<4; j++)
+            im[4*(p[0]+p[1]*w)+j] = col[j];
 }
 
 int main(int argc, char* argv[]) {
