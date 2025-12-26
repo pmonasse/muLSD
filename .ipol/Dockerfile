@@ -14,7 +14,7 @@ ENV bin /workdir/bin/
 RUN mkdir -p $bin
 WORKDIR $bin
 COPY . .
-RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j2
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j2 && cmake -S .ipol -B build2 -DCMAKE_BUILD_TYPE=Release && cmake --build build2
 
 # the execution will happen in the folder /workdir/exec
 # it will be created by IPOL
