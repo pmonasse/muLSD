@@ -1,5 +1,9 @@
 ## muLSD (a Multiscale Line Segment Detector done right)
 
+Version 0.9, 01/13/2026.
+
+Future versions: <https://github.com/pmonasse/muLSD>
+
 ### Authors
 Pascal Monasse <pascal.monasse@enpc.fr>,
 Rahima Djahel <rdjahel@gmail.com>,
@@ -45,6 +49,13 @@ Example:
 Build/muLSD data/grid.png grid.txt
 ```
 Generated file `grid.txt` must coincide with reference `data/grid_lines.txt`.
+
+### Files
+cluster.cpp(\*)     image.cpp  lsd.c          mulsd.hpp(\*)
+cluster.hpp(\*)     image.h    lsd.h          segment.cpp(\*)
+cmdLine.h          io_png.c    main.cpp(\*)   segment.hpp(\*)
+compare_lines.cpp  io_png.h    mulsd.cpp(\*)  test_pyramid.cpp
+(\*) Reviewed in IPOL.
 
 [^1]: Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, 2 (2012), pp. 35–55. <http://doi.org/10.5201/ipol.2012.gjmr-lsd>
 
